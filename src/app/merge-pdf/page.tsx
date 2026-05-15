@@ -13,6 +13,7 @@ import { DocumentIntake } from "@/components/pdf/DocumentIntake";
 import { useWorkspace } from "@/lib/workspace/workspace-context";
 import { getVisiblePages } from "@/lib/workspace/workspace-selectors";
 import { formatBytes } from "@/lib/files/download";
+import { readPdfDocument } from "@/lib/pdf/read-pdf-document";
 import { useRouter } from "next/navigation";
 import { Files, Layers, Download } from "lucide-react";
 import type { WorkspacePage } from "@/lib/workspace/workspace-types";
@@ -70,6 +71,54 @@ export default function MergePdfPage() {
     // File is ready, user presses continue - shows editor automatically
   }, []);
 
+  const handleAddMoreFiles = useCallback(
+    async (acceptedFiles: File[]) => {
+      for (const file of acceptedFiles) {
+        const id = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        
+        dispatch({
+          type: "filesAdded",
+          files: [{
+            id,
+            file,
+            name: file.name,
+            sizeBytes: file.size,
+            mimeType: file.type || "application/pdf",
+            pageCount: 0,
+            status: "reading",
+          }],
+        });
+
+        const info = await readPdfDocument(file);
+
+        if (info.error) {
+          dispatch({ type: "fileStatusChanged", fileId: id, status: "error", error: info.error });
+          continue;
+        }
+
+        dispatch({ type: "fileStatusChanged", fileId: id, status: "ready", pageCount: info.pageCount });
+
+        const pages: WorkspacePage[] = [];
+        for (let i = 0; i < info.pageCount; i++) {
+          const thumb = info.thumbnails.find((t) => t.pageIndex === i);
+          pages.push({
+            id: `${id}-p${i + 1}`,
+            fileId: id,
+            sourceFileName: file.name,
+            sourcePageIndex: i + 1,
+            outputIndex: -1,
+            thumbnailUrl: thumb?.url,
+            width: thumb?.width,
+            height: thumb?.height,
+            rotation: 0,
+          });
+        }
+        dispatch({ type: "pagesAdded", pages });
+      }
+    },
+    [dispatch]
+  );
+
   // State: No files → show DocumentIntake
   if (!hasFiles) {
     return (
@@ -101,7 +150,7 @@ export default function MergePdfPage() {
               Combine multiple PDFs into a single document
             </p>
           </div>
-          <GradientButton onClick={handleMerge} size="lg">
+          <GradientButton onClick={handleMerge} size="lg" disabled={state.files.filter(f => f.status === "ready").length < 2}>
             <Download size={18} />
             Merge PDFs
           </GradientButton>
@@ -138,7 +187,7 @@ export default function MergePdfPage() {
               </div>
               <div className="mt-3">
                 <Dropzone
-                  onFilesAccepted={() => {}}
+                  onFilesAccepted={handleAddMoreFiles}
                   title="Add more PDFs"
                   subtitle=""
                   ctaLabel="Browse"

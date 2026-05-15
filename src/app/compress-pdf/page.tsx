@@ -89,6 +89,28 @@ export default function CompressPdfPage() {
           {/* Left settings */}
           <div className="space-y-4">
             <GlassPanel className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-[#f8fafc]">Source file</h3>
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: "workspaceReset" })}
+                  className="text-xs text-slate-400 hover:text-cyan-300 transition-colors"
+                >
+                  Start over
+                </button>
+              </div>
+              <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[rgba(148,163,184,0.04)]">
+                <FileText size={16} className="text-cyan-300" />
+                <div className="min-w-0">
+                  <span className="text-sm text-slate-300 truncate block">
+                    {activeFile?.name || "document.pdf"}
+                  </span>
+                  <span className="text-xs text-slate-500">{state.pages.filter(p => !p.deleted).length} pages</span>
+                </div>
+              </div>
+            </GlassPanel>
+
+            <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[#f8fafc] mb-4">Compression level</h3>
               <div className="space-y-3">
                 {compressionLevels.map((l) => (

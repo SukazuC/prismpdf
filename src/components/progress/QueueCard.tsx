@@ -1,6 +1,6 @@
 import { GlassPanel } from "@/components/glass/GlassPanel";
 import { Clock, FileText } from "lucide-react";
-import { formatBytes } from "@/lib/demo-data";
+import { formatBytes } from "@/lib/files/format-bytes";
 
 type QueueItem = {
   id: string;

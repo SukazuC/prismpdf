@@ -1,5 +1,5 @@
 import { GlassPanel } from "@/components/glass/GlassPanel";
-import { formatBytes } from "@/lib/demo-data";
+import { formatBytes } from "@/lib/files/format-bytes";
 
 type TaskSummaryCardProps = {
   operation: string;

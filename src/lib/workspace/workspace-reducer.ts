@@ -1,4 +1,4 @@
-import type { WorkspaceState, WorkspaceFile, WorkspacePage, PendingTask, ResultArtifact } from "./workspace-types";
+import type { WorkspaceState, WorkspaceFile, WorkspacePage, PendingTask, ResultArtifact, PdfOperation } from "./workspace-types";
 
 export type WorkspaceAction =
   | { type: "filesAdded"; files: WorkspaceFile[] }
@@ -14,6 +14,7 @@ export type WorkspaceAction =
   | { type: "selectionClear" }
   | { type: "activeFileChanged"; fileId?: string }
   | { type: "taskCreated"; task: PendingTask }
+  | { type: "operationChanged"; operation?: PdfOperation }
   | { type: "resultReady"; result: ResultArtifact }
   | { type: "workspaceReset" };
 
@@ -106,6 +107,9 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 
     case "activeFileChanged":
       return { ...state, activeFileId: action.fileId };
+
+    case "operationChanged":
+      return { ...state, activeOperation: action.operation };
 
     case "taskCreated":
       return { ...state, pendingTask: action.task };

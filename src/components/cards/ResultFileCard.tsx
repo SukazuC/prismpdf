@@ -1,20 +1,18 @@
 "use client";
 
 import { GlassPanel } from "@/components/glass/GlassPanel";
-import { GradientButton } from "@/components/buttons/GradientButton";
-import { Download, FileText, Copy, Check } from "lucide-react";
+import { FileText, Copy, Check } from "lucide-react";
 import { useState } from "react";
-import { formatBytes } from "@/lib/demo-data";
+import { formatBytes } from "@/lib/files/format-bytes";
 
 type ResultFileCardProps = {
   name: string;
   sizeBytes: number;
   format: string;
-  downloadUrl?: string;
   previewUrl?: string;
 };
 
-export function ResultFileCard({ name, sizeBytes, format, downloadUrl, previewUrl }: ResultFileCardProps) {
+export function ResultFileCard({ name, sizeBytes, format, previewUrl }: ResultFileCardProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -51,12 +49,7 @@ export function ResultFileCard({ name, sizeBytes, format, downloadUrl, previewUr
           </p>
 
           <div className="flex flex-wrap gap-3 mt-4">
-            <a href={downloadUrl} download={name}>
-              <GradientButton size="sm">
-                <Download size={16} />
-                Download
-              </GradientButton>
-            </a>
+
             <button
               type="button"
               onClick={handleCopy}

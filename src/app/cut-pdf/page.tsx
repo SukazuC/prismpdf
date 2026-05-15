@@ -239,6 +239,16 @@ export default function CutPdfPage() {
           <div className="space-y-4">
             {/* Document header */}
             <GlassPanel className="p-4" intensity="soft">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Document</h3>
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: "workspaceReset" })}
+                  className="text-xs text-slate-400 hover:text-cyan-300 transition-colors"
+                >
+                  Start over
+                </button>
+              </div>
               <div className="flex items-center gap-3">
                 <FileText size={18} className="text-cyan-300" />
                 <div>

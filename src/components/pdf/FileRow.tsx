@@ -1,7 +1,7 @@
 "use client";
 
 import { FileText, CheckCircle, AlertCircle, Loader2, X } from "lucide-react";
-import { formatBytes } from "@/lib/demo-data";
+import { formatBytes } from "@/lib/files/format-bytes";
 import type { UploadedFile } from "@/lib/pdf/types";
 
 type FileRowProps = {

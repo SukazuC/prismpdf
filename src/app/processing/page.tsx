@@ -34,12 +34,7 @@ function ProcessingContent() {
   const steps = task ? (OPERATION_STEPS[task.operation] || ["Processing..."]) : [];
   const operationLabel = task?.operation || "operation";
 
-  // Redirect if no task
-  useEffect(() => {
-    if (!task) {
-      router.replace("/upload");
-    }
-  }, [task, router]);
+  // Task is optional — no redirect
 
   // Run the task
   useEffect(() => {
@@ -92,7 +87,8 @@ function ProcessingContent() {
   };
 
   const handleCancel = () => {
-    router.push("/upload");
+    dispatch({ type: "workspaceReset" });
+    router.push("/");
   };
 
   const stepStatuses = steps.map((_, i) => {
@@ -111,8 +107,28 @@ function ProcessingContent() {
   if (!task) {
     return (
       <AppShell backdropVariant="editor">
-        <section className="page-shell pt-16 text-center">
-          <p className="text-slate-400">Redirecting...</p>
+        <section className="page-shell pt-16 pb-16">
+          <div className="max-w-lg mx-auto text-center space-y-6">
+            <GlassPanel className="p-10">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-[rgba(148,163,184,0.1)] flex items-center justify-center text-slate-400">
+                  <X size={28} />
+                </div>
+                <h2 className="text-xl font-bold text-[#f8fafc]">No active task</h2>
+                <p className="text-sm text-slate-400">
+                  There is no task currently being processed. Start a new PDF task from the tools page.
+                </p>
+                <div className="flex gap-3 mt-2">
+                  <GradientButton onClick={() => router.push("/tools")} size="md">
+                    Go to tools
+                  </GradientButton>
+                  <GradientButton variant="secondary" onClick={() => router.push("/")} size="md">
+                    Back home
+                  </GradientButton>
+                </div>
+              </div>
+            </GlassPanel>
+          </div>
         </section>
       </AppShell>
     );

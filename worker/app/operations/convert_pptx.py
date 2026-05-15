@@ -52,6 +52,7 @@ def convert_to_pptx(input_path: Path, output_path: Path):
                 height=Inches(6.5),
             )
 
+        page_count = len(doc)
         doc.close()
         prs.save(str(output_path))
 
@@ -62,7 +63,7 @@ def convert_to_pptx(input_path: Path, output_path: Path):
             "PPTX conversion successful: %s -> %s (%d pages, %d bytes)",
             input_path.name,
             output_path.name,
-            len(doc),
+            page_count,
             output_path.stat().st_size,
         )
 

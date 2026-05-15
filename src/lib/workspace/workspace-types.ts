@@ -1,3 +1,5 @@
+export type PdfOperation = "merge" | "compress" | "convert" | "cut" | "organize";
+
 export type WorkspaceFileStatus = "queued" | "reading" | "ready" | "error";
 
 export type WorkspaceFile = {
@@ -40,9 +42,14 @@ export type ResultArtifact = {
   objectUrl: string;
   operation: string;
   createdAt: number;
+  pageCount?: number;
+  fileCount?: number;
+  sourceSummary?: string;
+  workerUsed?: boolean;
 };
 
 export type WorkspaceState = {
+  activeOperation?: PdfOperation;
   files: WorkspaceFile[];
   pages: WorkspacePage[];
   selectedPageIds: string[];

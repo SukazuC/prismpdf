@@ -1,6 +1,9 @@
+"use client";
+
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassPanel } from "@/components/glass/GlassPanel";
 import { GradientButton } from "@/components/buttons/GradientButton";
+import { SmartPdfIntakeDropzone } from "@/components/upload/SmartPdfIntakeDropzone";
 import { MergeIcon, CompressIcon, ConvertIcon, CutIcon } from "@/components/icons/ToolIcons";
 import Image from "next/image";
 import Link from "next/link";
@@ -52,22 +55,9 @@ export default function Home() {
 
           {/* Right: dropzone card */}
           <div className="relative z-10">
-            <Link href="/upload">
-              <GlassPanel className="p-8 cursor-pointer group hover:border-[rgba(56,189,248,0.4)] transition-all duration-300">
-                <div className="flex flex-col items-center text-center py-8 gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(53,213,255,0.2)] to-[rgba(168,85,247,0.2)] flex items-center justify-center border border-[rgba(148,163,184,0.15)] group-hover:scale-110 transition-transform duration-300">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-300">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                  </div>
-                  <p className="text-lg font-semibold text-[#f8fafc]">Drop your PDF here to start</p>
-                  <p className="text-sm text-slate-400">or click to browse files</p>
-                  <p className="text-xs text-slate-500 mt-2">Supports PDF, DOCX, PPTX, JPG, PNG</p>
-                </div>
-              </GlassPanel>
-            </Link>
+            <GlassPanel className="p-8">
+              <SmartPdfIntakeDropzone className="min-h-0" />
+            </GlassPanel>
           </div>
         </div>
 

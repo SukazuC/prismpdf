@@ -1,8 +1,10 @@
 import logging
+import os
 import time
 from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
 from app.operations.compress import compress_pdf
@@ -20,6 +22,22 @@ app = FastAPI(
 )
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+
+raw_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000"
+)
+allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["Content-Disposition", "Content-Length", "Content-Type",
+                     "X-Original-Size", "X-Output-Size", "X-Compression-Method", "X-Processing-Time"],
+)
 
 
 @app.get("/health")
@@ -75,6 +93,7 @@ async def compress_endpoint(
                 content=output_bytes,
                 media_type="application/pdf",
                 headers={
+                    "Content-Disposition": f'attachment; filename="compressed-{file.filename}"',
                     "X-Original-Size": str(original_size),
                     "X-Output-Size": str(len(output_bytes)),
                     "X-Compression-Method": level,
@@ -115,11 +134,13 @@ async def convert_docx_endpoint(
                 raise HTTPException(500, "DOCX conversion produced no output")
 
             output_bytes = output_path.read_bytes()
+            base_name = file.filename.rsplit(".", 1)[0] if file.filename else "document"
 
             return Response(
                 content=output_bytes,
                 media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 headers={
+                    "Content-Disposition": f'attachment; filename="{base_name}.docx"',
                     "X-Original-Size": str(len(contents)),
                     "X-Output-Size": str(len(output_bytes)),
                 },
@@ -159,11 +180,13 @@ async def convert_pptx_endpoint(
                 raise HTTPException(500, "PPTX conversion produced no output")
 
             output_bytes = output_path.read_bytes()
+            base_name = file.filename.rsplit(".", 1)[0] if file.filename else "document"
 
             return Response(
                 content=output_bytes,
                 media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
                 headers={
+                    "Content-Disposition": f'attachment; filename="{base_name}.pptx"',
                     "X-Original-Size": str(len(contents)),
                     "X-Output-Size": str(len(output_bytes)),
                 },

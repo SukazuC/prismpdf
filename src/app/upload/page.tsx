@@ -2,12 +2,11 @@
 
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassPanel } from "@/components/glass/GlassPanel";
-import { Dropzone } from "@/components/upload/Dropzone";
+import { SmartPdfIntakeDropzone } from "@/components/upload/SmartPdfIntakeDropzone";
 import { ToolCard } from "@/components/cards/ToolCard";
 import { MergeIcon, CompressIcon, ConvertIcon, CutIcon } from "@/components/icons/ToolIcons";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
-import { useRouter } from "next/navigation";
 import { Shield, Lock, Eye, FileText, FileImage, FileType } from "lucide-react";
 
 const quickTools = [
@@ -27,31 +26,16 @@ const supportedFormats = [
 ];
 
 export default function UploadPage() {
-  const router = useRouter();
-
-  const handleFiles = (files: File[]) => {
-    if (files.length > 0) {
-      const ext = "." + files[0].name.split(".").pop()?.toLowerCase();
-      if (ext === ".pdf") {
-        router.push("/organize-pages");
-      } else {
-        router.push("/convert-pdf");
-      }
-    }
-  };
-
   return (
     <AppShell>
       <section className="page-shell pt-16 pb-16 relative">
-        {/* Floating docs left */}
+        {/* Floating docs */}
         <div className="absolute left-0 top-20 -translate-x-1/3 w-[300px] opacity-25 pointer-events-none hidden xl:block" aria-hidden="true">
           <Image src={assets.illustrations.floatingPdfLeft} alt="" width={300} height={300} />
         </div>
         <div className="absolute left-8 top-60 -translate-x-1/4 w-[250px] opacity-20 pointer-events-none hidden xl:block" aria-hidden="true">
           <Image src={assets.illustrations.floatingGenericDoc} alt="" width={250} height={250} />
         </div>
-
-        {/* Floating docs right */}
         <div className="absolute right-0 top-20 translate-x-1/3 w-[300px] opacity-25 pointer-events-none hidden xl:block" aria-hidden="true">
           <Image src={assets.illustrations.floatingDocx} alt="" width={300} height={300} />
         </div>
@@ -67,10 +51,9 @@ export default function UploadPage() {
               Drag & drop or choose a file to get started
             </p>
           </div>
-          <Dropzone
-            onFilesAccepted={handleFiles}
-            className="min-h-[340px]"
-          />
+          <GlassPanel className="p-6">
+            <SmartPdfIntakeDropzone source="upload" className="min-h-[240px]" />
+          </GlassPanel>
         </div>
 
         {/* Quick-start tool cards */}
@@ -84,7 +67,7 @@ export default function UploadPage() {
         </div>
 
         {/* Supported formats */}
-        <div className="mb-12">
+        <div className="mb-12 max-w-4xl mx-auto">
           <GlassPanel className="p-6" intensity="soft">
             <h3 className="section-title text-[#f8fafc] mb-4 text-center">Supported formats</h3>
             <div className="flex flex-wrap justify-center gap-6">
@@ -101,7 +84,7 @@ export default function UploadPage() {
         </div>
 
         {/* Privacy cards */}
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
           {[
             { icon: Shield, title: "No data collection", desc: "We don't track or store your files." },
             { icon: Lock, title: "Encrypted in transit", desc: "All transfers use TLS encryption." },

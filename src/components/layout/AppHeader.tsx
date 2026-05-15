@@ -38,7 +38,7 @@ export function AppHeader() {
 
           {/* Logo */}
           <Link href="/" className="relative z-10 flex items-center gap-2 shrink-0">
-            <BrandLogo variant="full" className="h-7 w-auto" />
+            <BrandLogo variant="full" className="h-9 w-auto" />
           </Link>
 
           {/* Desktop Nav */}

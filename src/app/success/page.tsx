@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { Suspense } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { GlassPanel } from "@/components/glass/GlassPanel";
 import { GradientButton } from "@/components/buttons/GradientButton";
 import { ResultFileCard } from "@/components/cards/ResultFileCard";
 import { TaskSummaryCard } from "@/components/cards/TaskSummaryCard";
 import { FeedbackRatingBar } from "@/components/feedback/FeedbackRatingBar";
 import { useWorkspace } from "@/lib/workspace/workspace-context";
 import { useRouter } from "next/navigation";
-import { Check, Download, Sparkles, ArrowRight } from "lucide-react";
+import { Check, Download, Sparkles, ArrowRight, FileText } from "lucide-react";
 import Link from "next/link";
 
 const confettiParticles = Array.from({ length: 30 }).map(() => ({
@@ -24,17 +25,26 @@ function SuccessContent() {
   const result = state.result;
   const confettiActive = true;
 
-  useEffect(() => {
-    if (!result) {
-      router.replace("/upload");
-    }
-  }, [result, router]);
-
   if (!result) {
     return (
       <AppShell backdropVariant="success">
         <section className="page-shell pt-16 text-center">
-          <p className="text-slate-400">Redirecting...</p>
+          <GlassPanel className="p-10 max-w-lg mx-auto">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-[rgba(148,163,184,0.1)] flex items-center justify-center text-slate-400">
+                <FileText size={28} />
+              </div>
+              <h2 className="text-xl font-bold text-[#f8fafc]">No completed file found</h2>
+              <p className="text-sm text-slate-400">
+                There is no completed result to display. Process a file to see your results here.
+              </p>
+              <div className="flex gap-3 mt-2">
+                <GradientButton onClick={() => router.push("/tools")} size="md">
+                  Start a task
+                </GradientButton>
+              </div>
+            </div>
+          </GlassPanel>
         </section>
       </AppShell>
     );
@@ -120,7 +130,6 @@ function SuccessContent() {
               name={result.name}
               sizeBytes={result.sizeBytes}
               format={result.operation}
-              downloadUrl={result.objectUrl}
             />
             <TaskSummaryCard
               operation={result.operation}

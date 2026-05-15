@@ -198,7 +198,16 @@ export default function OrganizePagesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[270px_minmax(0,1fr)_270px] gap-4">
           <div className="space-y-4">
             <GlassPanel className="p-5">
-              <h3 className="text-sm font-semibold text-[#f8fafc] mb-3">Document</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-[#f8fafc]">Document</h3>
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: "workspaceReset" })}
+                  className="text-xs text-slate-400 hover:text-cyan-300 transition-colors"
+                >
+                  Start over
+                </button>
+              </div>
               <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[rgba(148,163,184,0.04)]">
                 <FileText size={16} className="text-cyan-300" />
                 <div className="min-w-0">
