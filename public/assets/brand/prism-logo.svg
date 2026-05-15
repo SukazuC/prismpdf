@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="300" viewBox="0 0 1040 300" fill="none">
+  <title>PrismPDF Logo Lockup</title>
+  <defs>
+    <linearGradient id="leftFace" x1="48" y1="236" x2="156" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#49F5FF"/>
+      <stop offset="0.45" stop-color="#2E8CFF"/>
+      <stop offset="1" stop-color="#C95CFF"/>
+    </linearGradient>
+    <linearGradient id="rightFace" x1="136" y1="34" x2="252" y2="236" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF6EEA"/>
+      <stop offset="0.42" stop-color="#8C57FF"/>
+      <stop offset="1" stop-color="#49D8FF"/>
+    </linearGradient>
+    <linearGradient id="baseFace" x1="52" y1="232" x2="250" y2="232" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#63FFF0"/>
+      <stop offset="0.5" stop-color="#2D84FF"/>
+      <stop offset="1" stop-color="#C957FF"/>
+    </linearGradient>
+    <linearGradient id="innerFace" x1="129" y1="99" x2="178" y2="205" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9B6BFF" stop-opacity="0.92"/>
+      <stop offset="0.58" stop-color="#1D8BFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#05102A" stop-opacity="0.88"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.15  0 0 0 0 0.78  0 0 0 0 1  0 0 0 0.55 0"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="outerClip">
+      <path d="M150 31 L256 239 L44 239 Z"/>
+    </clipPath>
+  </defs>
+
+  <g transform="translate(10 0)" filter="url(#glow)">
+    <g clip-path="url(#outerClip)">
+      <path d="M150 31 L44 239 L137 196 Z" fill="url(#leftFace)"/>
+      <path d="M150 31 L137 196 L256 239 Z" fill="url(#rightFace)"/>
+      <path d="M44 239 L137 196 L256 239 Z" fill="url(#baseFace)"/>
+      <path d="M150 31 L137 196 L157 165 Z" fill="#FFFFFF" opacity="0.22"/>
+    </g>
+    <path d="M150 95 L111 215 L184 215 Z" fill="url(#innerFace)" opacity="0.72"/>
+    <path d="M150 31 L256 239 L44 239 Z" stroke="url(#baseFace)" stroke-width="2" stroke-linejoin="round" opacity="0.95"/>
+  </g>
+
+  <text x="310" y="180"
+        font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif"
+        font-size="94" font-weight="650" letter-spacing="-3"
+        fill="#F5F7FF">PrismPDF</text>
+</svg>

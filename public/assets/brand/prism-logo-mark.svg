@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 256 256" fill="none">
+  <title>PrismPDF Prism Logo Mark</title>
+  <defs>
+    <linearGradient id="leftFace" x1="45" y1="210" x2="134" y2="29" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#49F5FF"/>
+      <stop offset="0.45" stop-color="#2E8CFF"/>
+      <stop offset="1" stop-color="#C95CFF"/>
+    </linearGradient>
+    <linearGradient id="rightFace" x1="112" y1="35" x2="222" y2="206" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF6EEA"/>
+      <stop offset="0.42" stop-color="#8C57FF"/>
+      <stop offset="1" stop-color="#49D8FF"/>
+    </linearGradient>
+    <linearGradient id="baseFace" x1="46" y1="204" x2="223" y2="204" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#63FFF0"/>
+      <stop offset="0.5" stop-color="#2D84FF"/>
+      <stop offset="1" stop-color="#C957FF"/>
+    </linearGradient>
+    <linearGradient id="innerFace" x1="105" y1="100" x2="156" y2="177" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9B6BFF" stop-opacity="0.92"/>
+      <stop offset="0.58" stop-color="#1D8BFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#05102A" stop-opacity="0.88"/>
+    </linearGradient>
+    <radialGradient id="edgeGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 133) rotate(90) scale(130 116)">
+      <stop offset="0.40" stop-color="#9D64FF" stop-opacity="0"/>
+      <stop offset="0.72" stop-color="#29DFFF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#D65AFF" stop-opacity="0.45"/>
+    </radialGradient>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.15  0 0 0 0 0.78  0 0 0 0 1  0 0 0 0.55 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="tightShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#06122C" flood-opacity="0.32"/>
+    </filter>
+    <clipPath id="outerClip">
+      <path d="M128 22 L224 210 L32 210 Z"/>
+    </clipPath>
+  </defs>
+
+  <g filter="url(#softGlow)">
+    <path d="M128 22 L224 210 L32 210 Z" fill="url(#edgeGlow)" opacity="0.9"/>
+  </g>
+
+  <g filter="url(#tightShadow)" clip-path="url(#outerClip)">
+    <path d="M128 22 L32 210 L116 171 Z" fill="url(#leftFace)"/>
+    <path d="M128 22 L116 171 L224 210 Z" fill="url(#rightFace)"/>
+    <path d="M32 210 L116 171 L224 210 Z" fill="url(#baseFace)"/>
+    <path d="M128 22 L116 171 L134 143 Z" fill="#FFFFFF" opacity="0.22"/>
+    <path d="M116 171 L32 210 L96 196 Z" fill="#FFFFFF" opacity="0.18"/>
+    <path d="M116 171 L224 210 L156 194 Z" fill="#FFFFFF" opacity="0.13"/>
+  </g>
+
+  <path d="M128 82 L93 188 L159 188 Z" fill="url(#innerFace)" opacity="0.72"/>
+  <path d="M128 82 L93 188 L120 170 Z" fill="#58F1FF" opacity="0.28"/>
+  <path d="M128 82 L159 188 L133 168 Z" fill="#D46BFF" opacity="0.25"/>
+
+  <path d="M128 22 L224 210 L32 210 Z" stroke="url(#baseFace)" stroke-width="2" stroke-linejoin="round" opacity="0.95"/>
+  <path d="M128 22 L116 171 L32 210" stroke="#EAFBFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+  <path d="M128 22 L116 171 L224 210" stroke="#F5E6FF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.25"/>
+</svg>

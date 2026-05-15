@@ -1,0 +1,399 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Background layers */
+  --color-bg-0: #020617;
+  --color-bg-1: #050b1d;
+  --color-bg-2: #071226;
+
+  /* Brand accent colors */
+  --color-brand-blue: #38bdf8;
+  --color-brand-cyan: #35d5ff;
+  --color-brand-violet: #7c3cff;
+  --color-brand-purple: #a855f7;
+  --color-brand-magenta: #ec4cff;
+  --color-brand-green: #35f2a6;
+  --color-brand-danger: #f43f5e;
+
+  /* Text colors */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #dbeafe;
+  --color-text-tertiary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  /* Stroke colors */
+  --color-stroke-default: rgba(148, 163, 184, 0.22);
+  --color-stroke-light: rgba(148, 163, 184, 0.12);
+  --color-stroke-hover: rgba(148, 163, 184, 0.36);
+
+  /* Panel background colors */
+  --color-panel-bg: rgba(7, 15, 35, 0.68);
+  --color-panel-bg-soft: rgba(7, 15, 35, 0.5);
+  --color-panel-bg-strong: rgba(12, 25, 55, 0.78);
+
+  /* Border radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+
+  /* Shadows */
+  --shadow-panel: 0 24px 80px rgba(0, 0, 0, 0.42);
+  --shadow-button: 0 8px 32px rgba(0, 0, 0, 0.32);
+  --shadow-glow-primary: 0 0 32px rgba(59, 130, 246, 0.42), 0 0 42px rgba(168, 85, 247, 0.28);
+  --shadow-glow-danger: 0 0 24px rgba(251, 113, 133, 0.36);
+}
+
+/* ============================================
+   Base
+   ============================================ */
+body {
+  background-color: #020617;
+  color: #f8fafc;
+  font-family: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
+}
+
+/* Selection */
+::selection {
+  background: rgba(53, 213, 255, 0.3);
+  color: #f8fafc;
+}
+
+/* Focus visible */
+*:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.9);
+  outline-offset: 3px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   Typography
+   ============================================ */
+.display-title {
+  font-size: clamp(2.25rem, 5vw, 3.75rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.page-title {
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.body-lg {
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+
+.body {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.caption {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+/* ============================================
+   Shell widths
+   ============================================ */
+.page-shell {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.editor-shell {
+  width: 100%;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .page-shell {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  .editor-shell {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* === Mobile Responsive Shell === */
+@media (max-width: 640px) {
+  .page-shell {
+    width: min(100% - 32px, 100%);
+  }
+  .editor-shell {
+    width: min(100% - 32px, 100%);
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1023px) {
+  .page-shell,
+  .editor-shell {
+    width: min(100% - 48px, 100%);
+  }
+}
+
+/* === Better touch targets on mobile === */
+@media (hover: none) and (pointer: coarse) {
+  button, 
+  a,
+  [role="button"] {
+    min-height: 44px;
+  }
+  
+  input, 
+  select, 
+  textarea {
+    font-size: 16px; /* Prevent iOS zoom */
+  }
+}
+
+/* ============================================
+   Glass panel (backdrop-filter fallback)
+   ============================================ */
+@supports (backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px)) {
+  .glass-panel {
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+}
+
+/* ============================================
+   Gradient button base
+   ============================================ */
+.gradient-button-primary {
+  background: linear-gradient(135deg, #28c7ff, #1668ff, #a855f7, #f04cff);
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* ============================================
+   Scrollbar styles (thin, dark)
+   ============================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+/* ============================================
+   Noise layer
+   ============================================ */
+.noise-overlay::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.035;
+  background-image: repeating-conic-gradient(#fff 0.0000001%, transparent 0.0000002%, transparent 99.9999999%);
+  background-size: 4px 4px;
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(56, 189, 248, 0.4);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* ============================================
+   Glow effects
+   ============================================ */
+.glow-blue {
+  box-shadow: 0 0 32px rgba(59, 130, 246, 0.42);
+}
+
+.glow-violet {
+  box-shadow: 0 0 32px rgba(168, 85, 247, 0.36);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 32px rgba(53, 213, 255, 0.36);
+}
+
+/* ============================================
+   Gradient text
+   ============================================ */
+.gradient-text-brand {
+  background: linear-gradient(135deg, #28c7ff, #a855f7, #f04cff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gradient-text-cyan {
+  background: linear-gradient(135deg, #35d5ff, #38bdf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gradient-text-violet {
+  background: linear-gradient(135deg, #7c3cff, #a855f7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ============================================
+   Confetti & scale animations
+   ============================================ */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes scale-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s ease-out forwards;
+}
+
+/* === Screen reader only === */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* === Skip to main content link === */
+.skip-to-main {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 100;
+  padding: 12px 20px;
+  background: #1668ff;
+  color: white;
+  font-weight: 600;
+  border-radius: 0 0 8px 0;
+  transition: top 0.2s;
+}
+
+.skip-to-main:focus {
+  top: 0;
+}
