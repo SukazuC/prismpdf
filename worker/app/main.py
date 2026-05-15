@@ -25,7 +25,7 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 
 raw_origins = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:3000"
+    "http://localhost:3000,https://prispdf.vercel.app"
 )
 allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
