@@ -1,0 +1,41 @@
+{
+  "generated_from": "PrismPDF front-end architecture handoff + provided visual references",
+  "illustrations": [
+    "assets/illustrations/floating-pdf-left.png",
+    "assets/illustrations/floating-pdf-right.png",
+    "assets/illustrations/floating-docx.png",
+    "assets/illustrations/floating-pptx.png",
+    "assets/illustrations/floating-generic-doc.png"
+  ],
+  "illustrations_webp": [
+    "assets/illustrations/floating-pdf-left.webp",
+    "assets/illustrations/floating-pdf-right.webp",
+    "assets/illustrations/floating-docx.webp",
+    "assets/illustrations/floating-pptx.webp",
+    "assets/illustrations/floating-generic-doc.webp"
+  ],
+  "mock_thumbnails": [
+    "assets/mock/annual-report-cover.png",
+    "assets/mock/annual-report-page-chart-1.png",
+    "assets/mock/annual-report-page-chart-2.png",
+    "assets/mock/annual-report-page-table.png",
+    "assets/mock/product-guide-cover.png",
+    "assets/mock/product-guide-page-phone.png",
+    "assets/mock/financial-overview-page.png"
+  ],
+  "mock_thumbnails_webp": [
+    "assets/mock/annual-report-cover.webp",
+    "assets/mock/annual-report-page-chart-1.webp",
+    "assets/mock/annual-report-page-chart-2.webp",
+    "assets/mock/annual-report-page-table.webp",
+    "assets/mock/product-guide-cover.webp",
+    "assets/mock/product-guide-page-phone.webp",
+    "assets/mock/financial-overview-page.webp"
+  ],
+  "preview": "previews/prismpdf-asset-contact-sheet.png",
+  "notes": [
+    "Floating hero art is transparent PNG/WebP at 900x900px with baked blue/violet/magenta glow.",
+    "PDF thumbnails are 720x1008px RGB PNG/WebP, designed to remain legible in editor grids and preview cards.",
+    "Assets are original programmatic illustrations, not crops from the reference screenshots."
+  ]
+}
