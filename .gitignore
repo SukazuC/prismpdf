@@ -43,3 +43,5 @@ next-env.d.ts
 # generated reports
 /reports/
 /test-results/
+
+.vercel

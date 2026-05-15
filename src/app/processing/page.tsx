@@ -1,57 +1,103 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassPanel } from "@/components/glass/GlassPanel";
 import { ProgressRing } from "@/components/progress/ProgressRing";
 import { ProcessingStepper } from "@/components/progress/ProcessingStepper";
 import { QueueCard } from "@/components/progress/QueueCard";
-import { useRouter, useSearchParams } from "next/navigation";
-import { getProcessingSteps, parseTaskParams } from "@/lib/task/task-state";
-import { X } from "lucide-react";
+import { GradientButton } from "@/components/buttons/GradientButton";
+import { useRouter } from "next/navigation";
+import { useWorkspace } from "@/lib/workspace/workspace-context";
+import { runTask, TaskError } from "@/lib/tasks/run-task";
+import { X, RefreshCw, ArrowLeft } from "lucide-react";
+
+const OPERATION_STEPS: Record<string, string[]> = {
+  merge: ["Reading PDFs", "Combining pages", "Creating download", "Complete"],
+  cut: ["Reading PDF", "Extracting pages", "Creating download", "Complete"],
+  organize: ["Reading PDF", "Organizing pages", "Creating download", "Complete"],
+  compress: ["Reading PDF", "Compressing", "Creating download", "Complete"],
+  convert: ["Reading PDF", "Converting", "Creating download", "Complete"],
+};
 
 function ProcessingContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const task = parseTaskParams(searchParams);
+  const { state, dispatch } = useWorkspace();
+  const task = state.pendingTask;
+  const hasRun = useRef(false);
 
   const [progress, setProgress] = useState(0);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [status, setStatus] = useState<"processing" | "complete" | "cancelled">("processing");
+  const [status, setStatus] = useState<"processing" | "complete" | "error" | "idle">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const steps = task ? getProcessingSteps(task.operation) : ["Processing..."];
-  const fileName = task?.fileName || "document.pdf";
-  const nextRoute = task?.next || "/success";
+  const steps = task ? (OPERATION_STEPS[task.operation] || ["Processing..."]) : [];
+  const operationLabel = task?.operation || "operation";
 
+  // Redirect if no task
   useEffect(() => {
-    if (status !== "processing") return;
+    if (!task) {
+      router.replace("/upload");
+    }
+  }, [task, router]);
 
-    const totalDuration = 4000;
-    const interval = 100;
+  // Run the task
+  useEffect(() => {
+    if (!task || hasRun.current) return;
+    hasRun.current = true;
 
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        const next = Math.min(prev + 100 / (totalDuration / interval), 100);
-        setCurrentStepIndex(Math.min(Math.floor((next / 100) * steps.length), steps.length - 1));
+    setStatus("processing");
 
-        if (next >= 100) {
-          clearInterval(timer);
+    const run = async () => {
+      try {
+        // Simulate progress while working
+        const progressInterval = setInterval(() => {
+          setProgress((prev) => {
+            const next = Math.min(prev + 5, 90);
+            setCurrentStepIndex(Math.min(Math.floor((next / 100) * steps.length), steps.length - 1));
+            return next;
+          });
+        }, 200);
+
+        const result = await runTask(state, task);
+
+        clearInterval(progressInterval);
+        setProgress(100);
+        setCurrentStepIndex(steps.length - 1);
+
+        dispatch({ type: "resultReady", result });
+
+        setTimeout(() => {
           setStatus("complete");
           setTimeout(() => {
-            router.push(`${nextRoute}?fileName=${encodeURIComponent(fileName)}&operation=${task?.operation || "merge"}`);
-          }, 800);
-        }
+            router.push("/success");
+          }, 600);
+        }, 400);
+      } catch (err) {
+        setStatus("error");
+        const msg = err instanceof TaskError ? err.message : "An unexpected error occurred";
+        setErrorMessage(msg);
+      }
+    };
 
-        return next;
-      });
-    }, interval);
+    run();
+  }, [task, state, dispatch, router, steps.length]);
 
-    return () => clearInterval(timer);
-  }, [status, steps.length, router, nextRoute, fileName, task?.operation]);
+  const handleRetry = () => {
+    hasRun.current = false;
+    setProgress(0);
+    setCurrentStepIndex(0);
+    setStatus("idle");
+    setErrorMessage("");
+  };
 
-  const stepStatuses = steps.map((step, i) => {
-    if (status === "complete") return "complete" as const;
-    if (i < currentStepIndex) return "complete" as const;
+  const handleCancel = () => {
+    router.push("/upload");
+  };
+
+  const stepStatuses = steps.map((_, i) => {
+    if (status === "error" && i === currentStepIndex) return "active" as const;
+    if (i < currentStepIndex || status === "complete") return "complete" as const;
     if (i === currentStepIndex) return "active" as const;
     return "pending" as const;
   });
@@ -62,10 +108,15 @@ function ProcessingContent() {
     status: stepStatuses[i],
   }));
 
-  const handleCancel = () => {
-    setStatus("cancelled");
-    router.push("/upload");
-  };
+  if (!task) {
+    return (
+      <AppShell backdropVariant="editor">
+        <section className="page-shell pt-16 text-center">
+          <p className="text-slate-400">Redirecting...</p>
+        </section>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell backdropVariant="editor">
@@ -83,20 +134,24 @@ function ProcessingContent() {
         <div className="max-w-2xl mx-auto space-y-6">
           <GlassPanel className="p-10">
             <div className="flex flex-col items-center text-center gap-6">
-              <ProgressRing value={progress} size={140} label={status === "complete" ? "Complete!" : "Processing"} />
+              <ProgressRing
+                value={progress}
+                size={140}
+                label={status === "complete" ? "Complete!" : status === "error" ? "Failed" : "Processing"}
+              />
 
               <div>
                 <h2 className="text-2xl font-bold text-[#f8fafc]">
                   {status === "complete"
                     ? "Processing complete!"
-                    : status === "cancelled"
-                      ? "Cancelled"
-                      : "Processing your file"}
+                    : status === "error"
+                      ? "Something went wrong"
+                      : `Processing your file...`}
                 </h2>
                 <p className="text-sm text-slate-400 mt-2">
-                  {status === "complete"
-                    ? "Your file is ready for download."
-                    : fileName}
+                  {status === "error"
+                    ? errorMessage
+                    : `${operationLabel} — the result will be ready in a moment.`}
                 </p>
               </div>
 
@@ -110,6 +165,23 @@ function ProcessingContent() {
                   Cancel
                 </button>
               )}
+
+              {status === "error" && (
+                <div className="flex gap-3">
+                  <GradientButton onClick={handleRetry} size="md">
+                    <RefreshCw size={16} />
+                    Retry
+                  </GradientButton>
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-slate-200 transition-all"
+                  >
+                    <ArrowLeft size={16} />
+                    Go back
+                  </button>
+                </div>
+              )}
             </div>
           </GlassPanel>
 
@@ -122,28 +194,30 @@ function ProcessingContent() {
             items={[
               {
                 id: "1",
-                fileName,
-                status: status === "complete" ? "complete" : "processing",
-                sizeBytes: 4200000,
+                fileName: task.settings?.outputName as string || "document.pdf",
+                status: status === "complete" ? "complete" : status === "error" ? "error" : "processing",
+                sizeBytes: state.files.reduce((s, f) => s + f.sizeBytes, 0),
               },
             ]}
           />
 
-          <GlassPanel className="p-5" intensity="soft">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[rgba(53,213,255,0.1)] flex items-center justify-center text-cyan-300">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
+          {status === "processing" && (
+            <GlassPanel className="p-5" intensity="soft">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[rgba(53,213,255,0.1)] flex items-center justify-center text-cyan-300">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-[#f8fafc]">Keep this tab open</p>
+                  <p className="text-xs text-slate-400">
+                    Your file is being processed. Please keep this tab open until complete.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-[#f8fafc]">Keep this tab open</p>
-                <p className="text-xs text-slate-400">
-                  Your file is being processed. Please keep this tab open until complete.
-                </p>
-              </div>
-            </div>
-          </GlassPanel>
+            </GlassPanel>
+          )}
         </div>
       </section>
     </AppShell>

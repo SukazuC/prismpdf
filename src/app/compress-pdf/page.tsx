@@ -5,30 +5,66 @@ import { AppShell } from "@/components/layout/AppShell";
 import { GlassPanel } from "@/components/glass/GlassPanel";
 import { GradientButton } from "@/components/buttons/GradientButton";
 import { StatCard } from "@/components/cards/StatCard";
-import { demoPages } from "@/lib/demo-data";
+import { DocumentIntake } from "@/components/pdf/DocumentIntake";
+import { useWorkspace } from "@/lib/workspace/workspace-context";
+import { getActiveFile } from "@/lib/workspace/workspace-selectors";
+import { formatBytes } from "@/lib/files/download";
 import { useRouter } from "next/navigation";
-import { Download, FileDown, TrendingDown, FileText } from "lucide-react";
+import { Download, FileDown, TrendingDown, FileText, AlertTriangle, Cpu } from "lucide-react";
 
 const compressionLevels = [
-  { id: "low", label: "Low", desc: "Best quality, ~10% smaller", savings: 10 },
-  { id: "balanced", label: "Balanced", desc: "Good quality, ~60% smaller", savings: 60 },
-  { id: "strong", label: "Strong", desc: "Smaller size, ~80% smaller", savings: 80 },
+  { id: "low", label: "Low", desc: "Best quality, moderate size reduction", savings: 10 },
+  { id: "balanced", label: "Balanced", desc: "Good quality, good size reduction", savings: 60 },
+  { id: "strong", label: "Strong", desc: "Smallest size, quality trade-off", savings: 80 },
 ];
 
 export default function CompressPdfPage() {
   const router = useRouter();
+  const { state, dispatch } = useWorkspace();
   const [level, setLevel] = useState("balanced");
   const [optimizeImages, setOptimizeImages] = useState(true);
   const [removeMetadata, setRemoveMetadata] = useState(false);
 
+  const hasFile = state.files.length > 0;
+  const activeFile = getActiveFile(state);
   const selectedLevel = compressionLevels.find((l) => l.id === level) || compressionLevels[1];
-  const originalSize = 4200000; // 4.2 MB demo
+
+  const originalSize = activeFile?.sizeBytes || 0;
   const estimatedSize = Math.round(originalSize * (1 - selectedLevel.savings / 100));
   const savedBytes = originalSize - estimatedSize;
 
+  const workerUnavailable = !process.env.NEXT_PUBLIC_PDF_WORKER_URL;
+
   const handleCompress = () => {
-    router.push("/processing?operation=compress&fileName=annual-report-2024-compressed.pdf&next=/success");
+    dispatch({
+      type: "taskCreated",
+      task: {
+        id: `task-${Date.now()}`,
+        operation: "compress",
+        settings: { level, optimizeImages, removeMetadata },
+        createdAt: Date.now(),
+      },
+    });
+    router.push("/processing");
   };
+
+  if (!hasFile) {
+    return (
+      <AppShell backdropVariant="editor">
+        <section className="page-shell pt-8 pb-16">
+          <div className="max-w-2xl mx-auto">
+            <div className="mb-6">
+              <h1 className="text-[28px] font-bold text-[#f8fafc]">Compress PDF</h1>
+              <p className="text-sm text-slate-400 mt-1">
+                Reduce file size while preserving quality
+              </p>
+            </div>
+            <DocumentIntake operation="compress" onReady={() => {}} />
+          </div>
+        </section>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell backdropVariant="editor">
@@ -43,8 +79,8 @@ export default function CompressPdfPage() {
 
         {/* Savings stats */}
         <div className="flex flex-wrap gap-3 mb-6">
-          <StatCard label="Original size" value="4.2 MB" accent="cyan" icon={<FileText size={18} />} />
-          <StatCard label="Estimated size" value={`${(estimatedSize / 1024 / 1024).toFixed(1)} MB`} accent="green" icon={<FileDown size={18} />} />
+          <StatCard label="Original size" value={formatBytes(originalSize)} accent="cyan" icon={<FileText size={18} />} />
+          <StatCard label="Estimated size" value={formatBytes(estimatedSize)} accent="green" icon={<FileDown size={18} />} />
           <StatCard label="You save" value={`~${selectedLevel.savings}%`} accent="magenta" icon={<TrendingDown size={18} />} />
         </div>
 
@@ -125,14 +161,43 @@ export default function CompressPdfPage() {
               </div>
             </GlassPanel>
 
-            <GradientButton onClick={handleCompress} size="lg" className="w-full">
+            {/* Worker processing notice */}
+            <GlassPanel className="p-4" intensity="soft">
+              <div className="flex items-start gap-3">
+                <Cpu size={16} className="text-cyan-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-[#f8fafc]">Server processed</p>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Compression is handled on our secure server. Files are processed transiently and deleted immediately after.
+                  </p>
+                </div>
+              </div>
+            </GlassPanel>
+
+            {/* Worker unavailable warning */}
+            {workerUnavailable && (
+              <GlassPanel className="p-4 border-[rgba(251,113,133,0.3)]" intensity="soft">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-[#f8fafc]">Worker unavailable</p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      The compression server is not configured. Set NEXT_PUBLIC_PDF_WORKER_URL to enable this feature.
+                    </p>
+                  </div>
+                </div>
+              </GlassPanel>
+            )}
+
+            <GradientButton
+              onClick={handleCompress}
+              size="lg"
+              className="w-full"
+              disabled={workerUnavailable}
+            >
               <Download size={18} />
               Compress PDF
             </GradientButton>
-
-            <p className="text-xs text-slate-500 text-center">
-              Savings are estimated. Actual results may vary.
-            </p>
           </div>
 
           {/* Right preview */}
@@ -141,19 +206,27 @@ export default function CompressPdfPage() {
               <div>
                 <p className="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wider">Original</p>
                 <GlassPanel className="p-4" intensity="soft">
-                  <div className="aspect-[5/7] max-w-[200px] mx-auto rounded-lg overflow-hidden border border-[rgba(148,163,184,0.15)] bg-white">
-                    <img src={demoPages[0].thumbnailUrl} alt="Original preview" className="w-full h-full object-cover" />
+                  <div className="aspect-[5/7] max-w-[200px] mx-auto rounded-lg overflow-hidden border border-[rgba(148,163,184,0.15)] flex items-center justify-center bg-[rgba(148,163,184,0.06)]">
+                    {activeFile && (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <FileText size={48} className="text-slate-500" />
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs text-slate-400 text-center mt-2">4.2 MB</p>
+                  <p className="text-xs text-slate-400 text-center mt-2">
+                    {formatBytes(originalSize)} · {state.pages.filter(p => !p.deleted).length} pages
+                  </p>
                 </GlassPanel>
               </div>
               <div>
                 <p className="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wider">Estimated result</p>
                 <GlassPanel className="p-4" intensity="soft">
-                  <div className="aspect-[5/7] max-w-[200px] mx-auto rounded-lg overflow-hidden border border-[rgba(148,163,184,0.15)] bg-white">
-                    <img src={demoPages[0].thumbnailUrl} alt="Compressed preview" className="w-full h-full object-cover" />
+                  <div className="aspect-[5/7] max-w-[200px] mx-auto rounded-lg overflow-hidden border border-[rgba(148,163,184,0.15)] flex items-center justify-center bg-[rgba(7,15,35,0.5)]">
+                    <FileDown size={48} className="text-cyan-300/50" />
                   </div>
-                  <p className="text-xs text-slate-400 text-center mt-2">{(estimatedSize / 1024 / 1024).toFixed(1)} MB</p>
+                  <p className="text-xs text-slate-400 text-center mt-2">
+                    {formatBytes(estimatedSize)} (~{selectedLevel.savings}% smaller)
+                  </p>
                 </GlassPanel>
               </div>
             </div>
@@ -164,9 +237,12 @@ export default function CompressPdfPage() {
         <div className="grid sm:grid-cols-2 gap-4 mt-6">
           <GlassPanel className="p-5" intensity="soft">
             <h4 className="text-sm font-semibold text-[#f8fafc] mb-2">Estimated download size</h4>
-            <p className="text-2xl font-bold text-green-400">{(estimatedSize / 1024 / 1024).toFixed(1)} MB</p>
+            <p className="text-2xl font-bold text-green-400">{formatBytes(estimatedSize)}</p>
             <p className="text-xs text-slate-400 mt-1">
-              Reduced from {(originalSize / 1024 / 1024).toFixed(1)} MB (save {formatSavedBytes(savedBytes)})
+              Reduced from {formatBytes(originalSize)} (save ~{formatBytes(savedBytes)})
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Actual results may vary. Savings are estimated before processing.
             </p>
           </GlassPanel>
           <GlassPanel className="p-5" intensity="soft">
@@ -183,10 +259,4 @@ export default function CompressPdfPage() {
       </section>
     </AppShell>
   );
-}
-
-function formatSavedBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

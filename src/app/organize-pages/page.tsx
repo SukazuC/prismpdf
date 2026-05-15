@@ -5,69 +5,69 @@ import { AppShell } from "@/components/layout/AppShell";
 import { GlassPanel } from "@/components/glass/GlassPanel";
 import { GradientButton } from "@/components/buttons/GradientButton";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
-import { PdfPageGrid } from "@/components/editor/PdfPageGrid";
+import { SortablePdfPageGrid } from "@/components/editor/SortablePdfPageGrid";
 import { SelectionBar } from "@/components/editor/SelectionBar";
 import { StatCard } from "@/components/cards/StatCard";
-import { demoPages } from "@/lib/demo-data";
-import type { PdfPage } from "@/lib/pdf/types";
+import { DocumentIntake } from "@/components/pdf/DocumentIntake";
+import { useWorkspace } from "@/lib/workspace/workspace-context";
+import { getVisiblePages, getActiveFile } from "@/lib/workspace/workspace-selectors";
+import type { WorkspacePage } from "@/lib/workspace/workspace-types";
 import { useRouter } from "next/navigation";
 import { Layers, Download, FileText } from "lucide-react";
 import Link from "next/link";
 
 export default function OrganizePagesPage() {
   const router = useRouter();
-  const [pages, setPages] = useState<PdfPage[]>(demoPages.filter((p) => p.fileId === "annual-report-2024"));
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { state, dispatch } = useWorkspace();
   const [gridColumns, setGridColumns] = useState(6);
-  const [undoStack, setUndoStack] = useState<PdfPage[][]>([]);
-  const [redoStack, setRedoStack] = useState<PdfPage[][]>([]);
 
-  const totalPages = pages.length;
-  const selectedCount = selectedIds.size;
+  const [undoStack, setUndoStack] = useState<WorkspacePage[][]>([]);
+  const [redoStack, setRedoStack] = useState<WorkspacePage[][]>([]);
 
-  // Save state for undo
+  const visiblePages = getVisiblePages(state);
+  const activeFile = getActiveFile(state);
+  const totalPages = visiblePages.length;
+  const selectedCount = state.selectedPageIds.length;
+  const hasFile = state.files.length > 0;
+
   const saveState = useCallback(
-    (newPages: PdfPage[]) => {
-      setUndoStack((prev) => [...prev.slice(-20), pages]); // max 20 undo levels
+    (newPages: WorkspacePage[]) => {
+      setUndoStack((prev) => [...prev.slice(-20), state.pages]);
       setRedoStack([]);
-      setPages(newPages);
+      dispatch({ type: "pagesReordered", pages: newPages });
     },
-    [pages]
+    [state.pages, dispatch]
   );
 
   const handleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    dispatch({ type: "selectionToggle", pageId: id });
   };
 
   const handleSelectAll = () => {
-    setSelectedIds(new Set(pages.map((p) => p.id)));
+    const ids = visiblePages.map((p) => p.id);
+    dispatch({ type: "selectionSet", pageIds: ids });
   };
 
   const handleDeselectAll = () => {
-    setSelectedIds(new Set());
+    dispatch({ type: "selectionClear" });
   };
 
   const handleDeleteSelected = () => {
-    if (selectedIds.size === 0) return;
-    const newPages = pages.filter((p) => !selectedIds.has(p.id));
+    if (selectedCount === 0) return;
+    const deletedIds = new Set(state.selectedPageIds);
+    const newPages = state.pages.map((p) =>
+      deletedIds.has(p.id) ? { ...p, deleted: true } : p
+    );
     saveState(newPages);
-    setSelectedIds(new Set());
+    dispatch({ type: "selectionClear" });
   };
 
   const handleRotateLeft = () => {
-    if (selectedIds.size === 0) return;
-    const newPages = pages.map((p) => {
-      if (selectedIds.has(p.id)) {
+    if (selectedCount === 0) return;
+    const newPages = state.pages.map((p) => {
+      if (state.selectedPageIds.includes(p.id)) {
         const newRotation: Record<number, 0 | 90 | 180 | 270> = {
-          0: 270,
-          90: 0,
-          180: 90,
-          270: 180,
+          0: 270, 90: 0, 180: 90, 270: 180,
         };
         return { ...p, rotation: newRotation[p.rotation] ?? 0 };
       }
@@ -77,14 +77,11 @@ export default function OrganizePagesPage() {
   };
 
   const handleRotateRight = () => {
-    if (selectedIds.size === 0) return;
-    const newPages = pages.map((p) => {
-      if (selectedIds.has(p.id)) {
+    if (selectedCount === 0) return;
+    const newPages = state.pages.map((p) => {
+      if (state.selectedPageIds.includes(p.id)) {
         const newRotation: Record<number, 0 | 90 | 180 | 270> = {
-          0: 90,
-          90: 180,
-          180: 270,
-          270: 0,
+          0: 90, 90: 180, 180: 270, 270: 0,
         };
         return { ...p, rotation: newRotation[p.rotation] ?? 90 };
       }
@@ -94,54 +91,82 @@ export default function OrganizePagesPage() {
   };
 
   const handleDuplicateSelected = () => {
-    if (selectedIds.size === 0) return;
-    const newPages = [...pages];
-    let maxGlobal = pages.reduce((max, p) => Math.max(max, p.globalIndex), -1);
-    const inserted: PdfPage[] = [];
-    pages.forEach((p) => {
-      if (selectedIds.has(p.id)) {
-        maxGlobal++;
-        inserted.push({
+    if (selectedCount === 0) return;
+    const newPages: WorkspacePage[] = [];
+    let maxOutputIndex = state.pages.reduce((max, p) => Math.max(max, p.outputIndex), -1);
+
+    state.pages.forEach((p) => {
+      if (state.selectedPageIds.includes(p.id)) {
+        maxOutputIndex++;
+        newPages.push({
           ...p,
-          id: `${p.id}-dup-${Date.now()}-${maxGlobal}`,
-          globalIndex: maxGlobal,
-          selected: false,
+          id: `${p.id}-dup-${Date.now()}-${maxOutputIndex}`,
+          outputIndex: maxOutputIndex,
         });
       }
     });
-    // Insert duplicates after the last selected original
-    const lastSelectedIdx = pages.reduce(
-      (max, p, i) => (selectedIds.has(p.id) ? i : max),
-      -1
-    );
-    newPages.splice(lastSelectedIdx + 1, 0, ...inserted);
-    saveState(newPages);
+
+    const allPages = [...state.pages, ...newPages];
+    saveState(allPages);
   };
 
   const handleUndo = () => {
     if (undoStack.length === 0) return;
     const prev = undoStack[undoStack.length - 1];
-    setRedoStack((prevStack) => [...prevStack, pages]);
+    setRedoStack((prevStack) => [...prevStack, state.pages]);
     setUndoStack((prevStack) => prevStack.slice(0, -1));
-    setPages(prev);
+    dispatch({ type: "pagesReordered", pages: prev });
   };
 
   const handleRedo = () => {
     if (redoStack.length === 0) return;
     const next = redoStack[redoStack.length - 1];
-    setUndoStack((prevStack) => [...prevStack, pages]);
+    setUndoStack((prevStack) => [...prevStack, state.pages]);
     setRedoStack((prevStack) => prevStack.slice(0, -1));
-    setPages(next);
+    dispatch({ type: "pagesReordered", pages: next });
   };
 
+  const handleReorder = useCallback(
+    (pages: WorkspacePage[]) => {
+      saveState(pages);
+    },
+    [saveState]
+  );
+
   const handleExport = () => {
-    router.push("/processing?operation=organize&fileName=organized-document.pdf&next=/success");
+    dispatch({
+      type: "taskCreated",
+      task: {
+        id: `task-${Date.now()}`,
+        operation: "organize",
+        settings: {},
+        createdAt: Date.now(),
+      },
+    });
+    router.push("/processing");
   };
+
+  if (!hasFile) {
+    return (
+      <AppShell backdropVariant="editor">
+        <section className="page-shell pt-8 pb-16">
+          <div className="max-w-2xl mx-auto">
+            <div className="mb-6">
+              <h1 className="text-[28px] font-bold text-[#f8fafc]">Organize Pages</h1>
+              <p className="text-sm text-slate-400 mt-1">
+                Reorder, rotate, delete, or duplicate pages
+              </p>
+            </div>
+            <DocumentIntake operation="organize" onReady={() => {}} />
+          </div>
+        </section>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell backdropVariant="editor">
       <section className="page-shell pt-8 pb-16">
-        {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-400 mb-4">
           <Link href="/tools" className="hover:text-slate-200 transition-colors">
             Tools
@@ -150,7 +175,6 @@ export default function OrganizePagesPage() {
           <span className="text-slate-200">Organize Pages</span>
         </div>
 
-        {/* Title */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-[28px] font-bold text-[#f8fafc] break-words">Organize Pages</h1>
@@ -164,7 +188,6 @@ export default function OrganizePagesPage() {
           </GradientButton>
         </div>
 
-        {/* Stats */}
         <div className="flex flex-wrap gap-3 mb-6">
           <StatCard label="Total pages" value={totalPages} accent="cyan" icon={<Layers size={18} />} />
           {selectedCount > 0 && (
@@ -172,16 +195,16 @@ export default function OrganizePagesPage() {
           )}
         </div>
 
-        {/* Main three-column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[270px_minmax(0,1fr)_270px] gap-4">
-          {/* Left sidebar - Document info */}
           <div className="space-y-4">
             <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[#f8fafc] mb-3">Document</h3>
               <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[rgba(148,163,184,0.04)]">
                 <FileText size={16} className="text-cyan-300" />
                 <div className="min-w-0">
-                  <p className="text-sm text-slate-300 truncate">Annual Report 2024.pdf</p>
+                  <p className="text-sm text-slate-300 truncate">
+                    {activeFile?.name || "document.pdf"}
+                  </p>
                   <p className="text-xs text-slate-500">{totalPages} pages</p>
                 </div>
               </div>
@@ -249,9 +272,7 @@ export default function OrganizePagesPage() {
             </GlassPanel>
           </div>
 
-          {/* Center - Page grid */}
           <div className="space-y-4">
-            {/* Toolbar */}
             <div className="flex items-center justify-between">
               <EditorToolbar
                 onUndo={handleUndo}
@@ -268,7 +289,6 @@ export default function OrganizePagesPage() {
               />
             </div>
 
-            {/* Selection bar */}
             <SelectionBar
               totalCount={totalPages}
               selectedCount={selectedCount}
@@ -277,14 +297,13 @@ export default function OrganizePagesPage() {
               onDeleteSelected={handleDeleteSelected}
             />
 
-            {/* Page grid */}
-            {pages.length > 0 ? (
-              <PdfPageGrid
-                pages={pages}
+            {visiblePages.length > 0 ? (
+              <SortablePdfPageGrid
+                pages={visiblePages}
                 columns={gridColumns}
-                selectedIds={selectedIds}
+                selectedIds={new Set(state.selectedPageIds)}
                 onSelect={handleSelect}
-                showDragHandle={true}
+                onReorder={handleReorder}
               />
             ) : (
               <GlassPanel className="p-12 text-center" intensity="soft">
@@ -301,17 +320,16 @@ export default function OrganizePagesPage() {
             )}
           </div>
 
-          {/* Right - Properties/actions */}
           <div className="space-y-4">
             <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[#f8fafc] mb-3">Properties</h3>
               {selectedCount === 1 ? (() => {
-                const selected = pages.find((p) => selectedIds.has(p.id));
+                const selected = visiblePages.find((p) => state.selectedPageIds.includes(p.id));
                 return selected ? (
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-slate-400">Page</span>
-                      <span className="text-slate-200">{selected.localIndex}</span>
+                      <span className="text-slate-200">{selected.sourcePageIndex}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Rotation</span>
@@ -333,7 +351,7 @@ export default function OrganizePagesPage() {
             <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[#f8fafc] mb-3">Output</h3>
               <p className="text-xs text-slate-400">
-                {totalPages} pages · organized-document.pdf
+                {totalPages} pages · organized-{activeFile?.name || "document.pdf"}
               </p>
               <button
                 type="button"

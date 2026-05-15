@@ -9,23 +9,28 @@ import { PdfPageGrid } from "@/components/editor/PdfPageGrid";
 import { RangeTimeline } from "@/components/editor/RangeTimeline";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { StatCard } from "@/components/cards/StatCard";
-import { demoPages } from "@/lib/demo-data";
+import { DocumentIntake } from "@/components/pdf/DocumentIntake";
+import { useWorkspace } from "@/lib/workspace/workspace-context";
+import { getVisiblePages } from "@/lib/workspace/workspace-selectors";
 import { parseRanges } from "@/lib/ranges/parse-ranges";
-import type { PageRange, PdfPage } from "@/lib/pdf/types";
+import type { PageRange } from "@/lib/pdf/types";
 import { useRouter } from "next/navigation";
 import { Scissors, Layers, FileText } from "lucide-react";
 
 export default function CutPdfPage() {
   const router = useRouter();
-  const [pages] = useState<PdfPage[]>(demoPages.filter((p) => p.fileId === "annual-report-2024"));
+  const { state, dispatch } = useWorkspace();
   const [rangeInput, setRangeInput] = useState("");
   const [ranges, setRanges] = useState<PageRange[]>([]);
-  const [parseError, setParseError] = useState<string>("");
+  const [parseError, setParseError] = useState("");
   const [method, setMethod] = useState<"range" | "extract" | "split">("range");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [gridColumns, setGridColumns] = useState(6);
 
-  const pageCount = pages.length;
+  const visiblePages = useMemo(() => getVisiblePages(state), [state]);
+  const pageCount = visiblePages.length;
+  const hasFile = state.files.length > 0;
+  const activeFile = state.files.find(f => f.status === "ready");
 
   const selectedPages = useMemo(() => {
     try {
@@ -77,9 +82,50 @@ export default function CutPdfPage() {
   };
 
   const handleCut = () => {
-    router.push("/processing?operation=cut&fileName=extracted-pages.pdf&next=/success");
+    const settings: Record<string, unknown> = { method };
+    if (method === "range") {
+      settings.ranges = ranges;
+    } else if (method === "extract") {
+      settings.selectedPageIndices = Array.from(selectedIds)
+        .map((id) => {
+          const page = visiblePages.find((p) => p.id === id);
+          return page?.sourcePageIndex;
+        })
+        .filter(Boolean);
+    } else if (method === "split") {
+      settings.pagesPerChunk = parseInt(rangeInput, 10) || 2;
+    }
+
+    dispatch({
+      type: "taskCreated",
+      task: {
+        id: `task-${Date.now()}`,
+        operation: "cut",
+        settings,
+        createdAt: Date.now(),
+      },
+    });
+    router.push("/processing");
   };
 
+  // Empty state
+  if (!hasFile) {
+    return (
+      <AppShell backdropVariant="editor">
+        <section className="page-shell pt-8 pb-16">
+          <div className="max-w-2xl mx-auto">
+            <div className="mb-6">
+              <h1 className="text-[28px] font-bold text-[#f8fafc]">Cut PDF</h1>
+              <p className="text-sm text-slate-400 mt-1">Extract or split pages from your PDF</p>
+            </div>
+            <DocumentIntake operation="cut" onReady={() => {}} />
+          </div>
+        </section>
+      </AppShell>
+    );
+  }
+
+  // Editor state
   return (
     <AppShell backdropVariant="editor">
       <section className="page-shell pt-8 pb-16">
@@ -94,7 +140,7 @@ export default function CutPdfPage() {
         {/* Stats */}
         <div className="flex flex-wrap gap-3 mb-6">
           <StatCard label="Total pages" value={pageCount} accent="cyan" icon={<Layers size={18} />} />
-          <StatCard label="Selected" value={outputPageCount} accent="violet" icon={<Scissors size={18} />} />
+          <StatCard label="Selected" value={outputPageCount || selectedIds.size} accent="violet" icon={<Scissors size={18} />} />
           <StatCard label="Output pages" value={outputPageCount || "-"} accent="green" icon={<FileText size={18} />} />
         </div>
 
@@ -105,11 +151,11 @@ export default function CutPdfPage() {
             <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[#f8fafc] mb-3">Method</h3>
               <div className="space-y-2">
-                {[
+                {([
                   { id: "range" as const, label: "Split by range" },
                   { id: "extract" as const, label: "Extract selected pages" },
                   { id: "split" as const, label: "Split every N pages" },
-                ].map((m) => (
+                ]).map((m) => (
                   <button
                     key={m.id}
                     type="button"
@@ -133,7 +179,7 @@ export default function CutPdfPage() {
                 <TextField
                   value={rangeInput}
                   onChange={handleRangeChange}
-                  placeholder='e.g. 1-3, 6-8, 12-14'
+                  placeholder="e.g. 1-3, 6-8, 12-14"
                   error={parseError}
                   label="Enter page ranges"
                 />
@@ -158,19 +204,15 @@ export default function CutPdfPage() {
             {/* Output summary */}
             <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[#f8fafc] mb-3">Output summary</h3>
-              {outputPageCount > 0 ? (
+              {outputPageCount > 0 || selectedIds.size > 0 ? (
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-400">Pages extracted</span>
-                    <span className="text-cyan-300 font-medium">{outputPageCount}</span>
+                    <span className="text-cyan-300 font-medium">{outputPageCount || selectedIds.size}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Ranges</span>
                     <span className="text-slate-200">{ranges.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Output files</span>
-                    <span className="text-slate-200">{ranges.length || 1}</span>
                   </div>
                 </div>
               ) : (
@@ -182,7 +224,11 @@ export default function CutPdfPage() {
               onClick={handleCut}
               size="lg"
               className="w-full"
-              disabled={outputPageCount === 0}
+              disabled={
+                (method === "range" && outputPageCount === 0) ||
+                (method === "extract" && selectedIds.size === 0) ||
+                (method === "split" && !parseInt(rangeInput, 10))
+              }
             >
               <Scissors size={18} />
               Cut PDF
@@ -196,7 +242,9 @@ export default function CutPdfPage() {
               <div className="flex items-center gap-3">
                 <FileText size={18} className="text-cyan-300" />
                 <div>
-                  <p className="text-sm font-medium text-[#f8fafc]">Annual Report 2024.pdf</p>
+                  <p className="text-sm font-medium text-[#f8fafc]">
+                    {activeFile?.name || "document.pdf"}
+                  </p>
                   <p className="text-xs text-slate-400">{pageCount} pages</p>
                 </div>
               </div>
@@ -215,21 +263,31 @@ export default function CutPdfPage() {
               onChange={handleTimelineChange}
             />
 
-            {/* Page grid (dimmed unselected) */}
-            {pages.length > 0 && (
+            {/* Page grid */}
+            {pageCount > 0 && (
               <PdfPageGrid
-                pages={pages}
+                pages={visiblePages.map(p => ({
+                  id: p.id,
+                  fileId: p.fileId,
+                  sourceFileName: p.sourceFileName,
+                  globalIndex: p.outputIndex,
+                  localIndex: p.sourcePageIndex,
+                  thumbnailUrl: p.thumbnailUrl || "",
+                  rotation: p.rotation,
+                  selected: state.selectedPageIds.includes(p.id),
+                }))}
                 columns={gridColumns}
                 selectedIds={
-                  selectedPages?.ok
+                  method === "range" && selectedPages?.ok
                     ? new Set(
-                        pages
-                          .filter((p) => selectedPages.selectedPages.includes(p.localIndex))
+                        visiblePages
+                          .filter((p) => selectedPages.selectedPages.includes(p.sourcePageIndex))
                           .map((p) => p.id)
                       )
                     : selectedIds
                 }
                 onSelect={handleSelect}
+                showDragHandle={false}
               />
             )}
           </div>

@@ -1,56 +1,95 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassPanel } from "@/components/glass/GlassPanel";
 import { GradientButton } from "@/components/buttons/GradientButton";
 import { Dropzone } from "@/components/upload/Dropzone";
-import { PdfPageGrid } from "@/components/editor/PdfPageGrid";
+import { SortablePdfPageGrid } from "@/components/editor/SortablePdfPageGrid";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { StatCard } from "@/components/cards/StatCard";
 import { FileRow } from "@/components/pdf/FileRow";
-import { formatBytes, demoFiles, demoPages } from "@/lib/demo-data";
-import type { PdfPage, UploadedFile } from "@/lib/pdf/types";
+import { DocumentIntake } from "@/components/pdf/DocumentIntake";
+import { useWorkspace } from "@/lib/workspace/workspace-context";
+import { getVisiblePages } from "@/lib/workspace/workspace-selectors";
+import { formatBytes } from "@/lib/files/download";
 import { useRouter } from "next/navigation";
 import { Files, Layers, Download } from "lucide-react";
+import type { WorkspacePage } from "@/lib/workspace/workspace-types";
+import type { UploadedFileStatus } from "@/lib/pdf/types";
 
 export default function MergePdfPage() {
   const router = useRouter();
-  const [files, setFiles] = useState<UploadedFile[]>(
-    demoFiles.map((f) => ({ ...f, status: "ready" as const, type: "application/pdf" }))
-  );
-  const [pages] = useState<PdfPage[]>(demoPages);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { state, dispatch } = useWorkspace();
   const [gridColumns, setGridColumns] = useState(6);
 
-  const totalPages = useMemo(() => pages.length, [pages]);
+  const visiblePages = useMemo(() => getVisiblePages(state), [state]);
+  const totalPages = useMemo(() => visiblePages.length, [visiblePages]);
   const totalSize = useMemo(
-    () => files.reduce((sum, f) => sum + f.sizeBytes, 0),
-    [files]
+    () => state.files.reduce((sum, f) => sum + f.sizeBytes, 0),
+    [state.files]
   );
 
-  const handleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  const hasFiles = state.files.length > 0;
+
+  const handleSelect = useCallback(
+    (id: string) => {
+      dispatch({ type: "selectionToggle", pageId: id });
+    },
+    [dispatch]
+  );
+
+  const handleReorder = useCallback(
+    (pages: WorkspacePage[]) => {
+      dispatch({ type: "pagesReordered", pages });
+    },
+    [dispatch]
+  );
+
+  const handleRemoveFile = useCallback(
+    (id: string) => {
+      dispatch({ type: "fileRemoved", fileId: id });
+    },
+    [dispatch]
+  );
+
+  const handleMerge = useCallback(() => {
+    dispatch({
+      type: "taskCreated",
+      task: {
+        id: `task-${Date.now()}`,
+        operation: "merge",
+        settings: { outputName: "merged-document.pdf" },
+        createdAt: Date.now(),
+      },
     });
-  };
+    router.push("/processing");
+  }, [dispatch, router]);
 
-  const handleFilesAccepted = (_accepted: File[]) => {
-    // In demo mode, just add existing demo files
-    // Real implementation would read actual files
-  };
+  const handleReady = useCallback(() => {
+    // File is ready, user presses continue - shows editor automatically
+  }, []);
 
-  const handleRemoveFile = (id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
-  };
+  // State: No files → show DocumentIntake
+  if (!hasFiles) {
+    return (
+      <AppShell backdropVariant="editor">
+        <section className="page-shell pt-8 pb-16">
+          <div className="max-w-2xl mx-auto">
+            <div className="mb-6">
+              <h1 className="text-[28px] font-bold text-[#f8fafc]">Merge PDF</h1>
+              <p className="text-sm text-slate-400 mt-1">
+                Combine multiple PDFs into a single document
+              </p>
+            </div>
+            <DocumentIntake operation="merge" onReady={handleReady} />
+          </div>
+        </section>
+      </AppShell>
+    );
+  }
 
-  const handleMerge = () => {
-    router.push("/processing?operation=merge&fileName=merged-output.pdf&next=/success");
-  };
-
+  // State: Has files → show editor
   return (
     <AppShell backdropVariant="editor">
       <section className="page-shell pt-8 pb-16">
@@ -70,7 +109,7 @@ export default function MergePdfPage() {
 
         {/* Stats */}
         <div className="flex flex-wrap gap-3 mb-6">
-          <StatCard label="Files" value={files.length} accent="cyan" icon={<Files size={18} />} />
+          <StatCard label="Files" value={state.files.length} accent="cyan" icon={<Files size={18} />} />
           <StatCard label="Total pages" value={totalPages} accent="violet" icon={<Layers size={18} />} />
           <StatCard label="Total size" value={formatBytes(totalSize)} accent="green" icon={<Download size={18} />} />
         </div>
@@ -82,13 +121,24 @@ export default function MergePdfPage() {
             <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[#f8fafc] mb-3">Upload files</h3>
               <div className="space-y-2">
-                {files.map((f) => (
-                  <FileRow key={f.id} file={f} onRemove={handleRemoveFile} />
+                {state.files.map((f) => (
+                  <FileRow
+                    key={f.id}
+                    file={{
+                      id: f.id,
+                      name: f.name,
+                      sizeBytes: f.sizeBytes,
+                      pageCount: f.pageCount,
+                      type: f.mimeType,
+                      status: f.status === "reading" ? "uploading" : f.status as UploadedFileStatus,
+                    }}
+                    onRemove={() => handleRemoveFile(f.id)}
+                  />
                 ))}
               </div>
               <div className="mt-3">
                 <Dropzone
-                  onFilesAccepted={handleFilesAccepted}
+                  onFilesAccepted={() => {}}
                   title="Add more PDFs"
                   subtitle=""
                   ctaLabel="Browse"
@@ -123,23 +173,23 @@ export default function MergePdfPage() {
                 onZoomIn={() => setGridColumns((c) => Math.min(c + 1, 10))}
                 onZoomOut={() => setGridColumns((c) => Math.max(c - 1, 2))}
                 gridMode={true}
-                selectionCount={selectedIds.size}
+                selectionCount={state.selectedPageIds.length}
               />
             </div>
 
-            {/* Page grid */}
+            {/* Sortable page grid */}
             <div className="min-h-[400px]">
-              {pages.length > 0 ? (
-                <PdfPageGrid
-                  pages={pages}
+              {visiblePages.length > 0 ? (
+                <SortablePdfPageGrid
+                  pages={visiblePages}
                   columns={gridColumns}
-                  selectedIds={selectedIds}
+                  selectedIds={new Set(state.selectedPageIds)}
                   onSelect={handleSelect}
-                  showDragHandle={true}
+                  onReorder={handleReorder}
                 />
               ) : (
                 <GlassPanel className="p-12 text-center" intensity="soft">
-                  <p className="text-slate-400">Upload PDFs to see page previews</p>
+                  <p className="text-slate-400">No pages remain</p>
                 </GlassPanel>
               )}
             </div>

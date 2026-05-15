@@ -1,13 +1,14 @@
 "use client";
 
-import { Suspense } from "react";
+import { useEffect, Suspense } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { GradientButton } from "@/components/buttons/GradientButton";
 import { ResultFileCard } from "@/components/cards/ResultFileCard";
 import { TaskSummaryCard } from "@/components/cards/TaskSummaryCard";
 import { FeedbackRatingBar } from "@/components/feedback/FeedbackRatingBar";
-import { useSearchParams } from "next/navigation";
-import { Check, Download, ArrowRight, Sparkles } from "lucide-react";
+import { useWorkspace } from "@/lib/workspace/workspace-context";
+import { useRouter } from "next/navigation";
+import { Check, Download, Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 const confettiParticles = Array.from({ length: 30 }).map(() => ({
@@ -18,16 +19,42 @@ const confettiParticles = Array.from({ length: 30 }).map(() => ({
 }));
 
 function SuccessContent() {
-  const searchParams = useSearchParams();
-  const fileName = searchParams.get("fileName") || "processed-document.pdf";
-  const operation = searchParams.get("operation") || "merge";
+  const router = useRouter();
+  const { state, dispatch } = useWorkspace();
+  const result = state.result;
   const confettiActive = true;
 
-  const mockResult = {
-    name: fileName,
-    sizeBytes: 3800000,
-    format: "pdf",
+  useEffect(() => {
+    if (!result) {
+      router.replace("/upload");
+    }
+  }, [result, router]);
+
+  if (!result) {
+    return (
+      <AppShell backdropVariant="success">
+        <section className="page-shell pt-16 text-center">
+          <p className="text-slate-400">Redirecting...</p>
+        </section>
+      </AppShell>
+    );
+  }
+
+  const handleDownload = () => {
+    const a = document.createElement("a");
+    a.href = result.objectUrl;
+    a.download = result.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
+
+  const handleNewTask = () => {
+    dispatch({ type: "workspaceReset" });
+    router.push("/upload");
+  };
+
+  const totalFileSize = state.files.reduce((s, f) => s + f.sizeBytes, 0);
 
   return (
     <AppShell backdropVariant="success">
@@ -78,32 +105,30 @@ function SuccessContent() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-4">
-            <GradientButton size="lg">
+            <GradientButton size="lg" onClick={handleDownload}>
               <Download size={20} />
               Download file
             </GradientButton>
-            <Link href="/upload">
-              <GradientButton variant="secondary" size="lg">
-                <Sparkles size={20} />
-                Start another task
-              </GradientButton>
-            </Link>
+            <GradientButton variant="secondary" size="lg" onClick={handleNewTask}>
+              <Sparkles size={20} />
+              Start another task
+            </GradientButton>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4 text-left">
             <ResultFileCard
-              name={mockResult.name}
-              sizeBytes={mockResult.sizeBytes}
-              format={mockResult.format}
-              downloadUrl="#"
+              name={result.name}
+              sizeBytes={result.sizeBytes}
+              format={result.operation}
+              downloadUrl={result.objectUrl}
             />
             <TaskSummaryCard
-              operation={operation}
-              fileName={fileName}
-              pageCount={12}
-              fileSize={4200000}
+              operation={result.operation}
+              fileName={result.name}
+              pageCount={state.pages.filter((p) => !p.deleted).length}
+              fileSize={totalFileSize}
               outputFormat="pdf"
-              duration="~2.4s"
+              duration="Instant"
             />
           </div>
 
