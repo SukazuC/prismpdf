@@ -31,6 +31,7 @@ export function ResultFileCard({ name, sizeBytes, format, previewUrl }: ResultFi
       <div className="flex items-start gap-5">
         {/* Preview */}
         {previewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- Result previews may be dynamic blob URLs from generated files.
           <img
             src={previewUrl}
             alt="File preview"

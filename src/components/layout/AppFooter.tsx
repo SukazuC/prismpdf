@@ -6,7 +6,7 @@ export function AppFooter() {
   return (
     <footer className="mt-auto pt-20 pb-8 px-4">
       <div className="page-shell">
-        <div className="relative flex flex-col md:flex-row items-center justify-between gap-6 px-8 py-6 rounded-2xl bg-[rgba(7,15,35,0.68)] backdrop-blur-2xl border border-[rgba(148,163,184,0.22)]">
+        <div className="relative flex flex-col items-center justify-between gap-6 rounded-2xl border border-[rgba(148,163,184,0.22)] bg-[rgba(7,15,35,0.68)] px-5 py-6 backdrop-blur-2xl sm:px-8 lg:flex-row lg:items-center">
           {/* Gradient overlay */}
           <div
             className="pointer-events-none absolute inset-0 rounded-2xl opacity-40"
@@ -15,15 +15,15 @@ export function AppFooter() {
           />
 
           {/* Left */}
-          <div className="relative z-10 flex items-center gap-4">
+          <div className="relative z-10 flex shrink-0 items-center gap-4">
             <BrandLogo variant="full" className="h-6 w-auto" />
-            <span className="text-slate-500 text-sm hidden sm:inline">
+            <span className="hidden text-sm text-slate-500 sm:inline">
               &copy; {new Date().getFullYear()} PrismPDF
             </span>
           </div>
 
           {/* Center links */}
-          <div className="relative z-10 flex items-center gap-6 text-sm">
+          <div className="relative z-10 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-sm lg:gap-6">
             <Link href="/tools" className="text-slate-400 hover:text-slate-200 transition-colors">
               All tools
             </Link>
@@ -39,8 +39,8 @@ export function AppFooter() {
           </div>
 
           {/* Right */}
-          <div className="relative z-10 flex items-center gap-2 text-sm text-slate-500">
-            <Lock size={14} />
+          <div className="relative z-10 flex min-w-0 items-center justify-center gap-2 text-center text-sm text-slate-500 lg:shrink-0 lg:justify-end lg:text-left">
+            <Lock size={14} className="shrink-0" />
             <span>Secure by design. Built for simplicity.</span>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { PdfThumbnailCard } from "@/components/editor/PdfThumbnailCard";
 import type { PdfPage } from "@/lib/pdf/types";
+import type { CSSProperties } from "react";
 
 type PdfPageGridProps = {
   pages: PdfPage[];
@@ -22,12 +23,14 @@ export function PdfPageGrid({
   showDragHandle = false,
   dimmedIds = new Set(),
 }: PdfPageGridProps) {
+  const gridStyle = {
+    "--grid-columns": Math.min(columns, pages.length || 1),
+  } as CSSProperties;
+
   return (
     <div
-      className="grid gap-3"
-      style={{
-        gridTemplateColumns: `repeat(${Math.min(columns, pages.length || 1)}, minmax(0, 1fr))`,
-      }}
+      className="grid max-w-full grid-cols-[repeat(auto-fit,minmax(min(150px,100%),1fr))] gap-3 md:grid-cols-[repeat(auto-fit,minmax(min(170px,100%),1fr))] lg:[grid-template-columns:repeat(var(--grid-columns),minmax(0,1fr))]"
+      style={gridStyle}
     >
       {pages.map((page) => (
         <PdfThumbnailCard

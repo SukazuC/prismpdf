@@ -25,8 +25,8 @@ export default function CompressPdfPage() {
   const [optimizeImages, setOptimizeImages] = useState(true);
   const [removeMetadata, setRemoveMetadata] = useState(false);
 
-  const hasFile = state.files.length > 0;
   const activeFile = getActiveFile(state);
+  const hasFile = activeFile?.status === "ready";
   const selectedLevel = compressionLevels.find((l) => l.id === level) || compressionLevels[1];
 
   const originalSize = activeFile?.sizeBytes || 0;
@@ -34,6 +34,7 @@ export default function CompressPdfPage() {
   const savedBytes = originalSize - estimatedSize;
 
   const workerUnavailable = !process.env.NEXT_PUBLIC_PDF_WORKER_URL;
+  const canCompress = !workerUnavailable;
 
   const handleCompress = () => {
     dispatch({
@@ -68,7 +69,7 @@ export default function CompressPdfPage() {
 
   return (
     <AppShell backdropVariant="editor">
-      <section className="page-shell pt-8 pb-16">
+      <section className="page-shell pt-8 pb-28 lg:pb-16">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-[28px] font-bold text-[#f8fafc] break-words">Compress PDF</h1>
@@ -87,17 +88,26 @@ export default function CompressPdfPage() {
         {/* Main grid */}
         <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] gap-5">
           {/* Left settings */}
-          <div className="space-y-4">
+          <div className="order-2 space-y-4 lg:order-1">
             <GlassPanel className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-[#f8fafc]">Source file</h3>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: "workspaceReset" })}
-                  className="text-xs text-slate-400 hover:text-cyan-300 transition-colors"
-                >
-                  Start over
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => activeFile && dispatch({ type: "fileRemoved", fileId: activeFile.id })}
+                    className="text-xs text-slate-400 hover:text-red-300 transition-colors"
+                  >
+                    Remove file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: "workspaceReset" })}
+                    className="text-xs text-slate-400 hover:text-cyan-300 transition-colors"
+                  >
+                    Replace file
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[rgba(148,163,184,0.04)]">
                 <FileText size={16} className="text-cyan-300" />
@@ -214,8 +224,8 @@ export default function CompressPdfPage() {
             <GradientButton
               onClick={handleCompress}
               size="lg"
-              className="w-full"
-              disabled={workerUnavailable}
+              className="hidden w-full lg:inline-flex"
+              disabled={!canCompress}
             >
               <Download size={18} />
               Compress PDF
@@ -223,7 +233,7 @@ export default function CompressPdfPage() {
           </div>
 
           {/* Right preview */}
-          <div className="space-y-4">
+          <div className="order-1 min-w-0 space-y-4 lg:order-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wider">Original</p>
@@ -279,6 +289,12 @@ export default function CompressPdfPage() {
           </GlassPanel>
         </div>
       </section>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[rgba(148,163,184,0.15)] bg-[rgba(7,15,35,0.92)] px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
+        <GradientButton onClick={handleCompress} size="lg" className="w-full" disabled={!canCompress}>
+          <Download size={18} />
+          Compress PDF
+        </GradientButton>
+      </div>
     </AppShell>
   );
 }

@@ -8,6 +8,13 @@ import { FileRow } from "@/components/pdf/FileRow";
 import { useWorkspace } from "@/lib/workspace/workspace-context";
 import { readPdfDocument } from "@/lib/pdf/read-pdf-document";
 import type { WorkspacePage } from "@/lib/workspace/workspace-types";
+import {
+  LOCAL_BROWSER_FILE_LIMIT_MB,
+  LOCAL_PRIVACY_NOTE,
+  MIXED_CONVERT_PRIVACY_NOTE,
+  SERVER_PRIVACY_NOTE,
+  WORKER_FILE_LIMIT_MB,
+} from "@/lib/files/limits";
 import { ArrowRight, AlertTriangle } from "lucide-react";
 
 type OperationConstraints = {
@@ -18,7 +25,9 @@ type OperationConstraints = {
   label: string;
   description: string;
   runLabel: string;
-  privacyMode: "local" | "server";
+  privacyMode: "local" | "server" | "mixed";
+  maxSizeMB: number;
+  privacyNote: string;
 };
 
 const operationConstraintsMap: Record<string, OperationConstraints> = {
@@ -30,6 +39,8 @@ const operationConstraintsMap: Record<string, OperationConstraints> = {
     description: "Combine multiple PDFs into one document",
     runLabel: "Merge PDFs",
     privacyMode: "local",
+    maxSizeMB: LOCAL_BROWSER_FILE_LIMIT_MB,
+    privacyNote: LOCAL_PRIVACY_NOTE,
   },
   compress: {
     accept: [".pdf"],
@@ -39,6 +50,8 @@ const operationConstraintsMap: Record<string, OperationConstraints> = {
     description: "Reduce file size while preserving quality",
     runLabel: "Compress PDF",
     privacyMode: "server",
+    maxSizeMB: WORKER_FILE_LIMIT_MB,
+    privacyNote: SERVER_PRIVACY_NOTE,
   },
   convert: {
     accept: [".pdf"],
@@ -47,7 +60,9 @@ const operationConstraintsMap: Record<string, OperationConstraints> = {
     label: "Convert PDF",
     description: "Convert to images, text, or Office formats",
     runLabel: "Convert PDF",
-    privacyMode: "server",
+    privacyMode: "mixed",
+    maxSizeMB: WORKER_FILE_LIMIT_MB,
+    privacyNote: MIXED_CONVERT_PRIVACY_NOTE,
   },
   cut: {
     accept: [".pdf"],
@@ -57,6 +72,8 @@ const operationConstraintsMap: Record<string, OperationConstraints> = {
     description: "Extract or split pages from your PDF",
     runLabel: "Cut PDF",
     privacyMode: "local",
+    maxSizeMB: LOCAL_BROWSER_FILE_LIMIT_MB,
+    privacyNote: LOCAL_PRIVACY_NOTE,
   },
   organize: {
     accept: [".pdf"],
@@ -66,7 +83,15 @@ const operationConstraintsMap: Record<string, OperationConstraints> = {
     description: "Reorder, rotate, delete, or duplicate pages",
     runLabel: "Export PDF",
     privacyMode: "local",
+    maxSizeMB: LOCAL_BROWSER_FILE_LIMIT_MB,
+    privacyNote: LOCAL_PRIVACY_NOTE,
   },
+};
+
+const privacyBadgeCopy: Record<OperationConstraints["privacyMode"], string> = {
+  local: "Browser only",
+  server: "Server processed",
+  mixed: "Local + server",
 };
 
 type DocumentIntakeProps = {
@@ -179,7 +204,7 @@ export function DocumentIntake({ operation, onReady, onBack }: DocumentIntakePro
               color: constraints.privacyMode === "local" ? "#35f2a6" : "#35d5ff",
             }}
           >
-            {constraints.privacyMode === "local" ? "Browser only" : "Server processed"}
+            {privacyBadgeCopy[constraints.privacyMode]}
           </div>
         </div>
 
@@ -190,6 +215,8 @@ export function DocumentIntake({ operation, onReady, onBack }: DocumentIntakePro
           ctaLabel="Browse files"
           accept={constraints.accept}
           multiple={constraints.multiple}
+          maxSizeMB={constraints.maxSizeMB}
+          privacyNote={constraints.privacyNote}
           state={isReading ? "disabled" : undefined}
         />
       </GlassPanel>

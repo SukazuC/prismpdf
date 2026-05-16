@@ -20,9 +20,9 @@ export function AppHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 pt-4 px-4">
+    <header className="sticky top-0 z-50 px-3 pt-4 sm:px-4">
       <nav className="page-shell">
-        <div className="relative flex items-center justify-between h-[72px] px-6 rounded-2xl bg-[rgba(7,15,35,0.68)] backdrop-blur-2xl border border-[rgba(148,163,184,0.22)] shadow-[0_24px_80px_rgba(0,0,0,0.42)]">
+        <div className="relative flex h-[72px] items-center justify-between gap-3 rounded-2xl border border-[rgba(148,163,184,0.22)] bg-[rgba(7,15,35,0.68)] px-4 shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:px-6">
           {/* Gradient overlay */}
           <div
             className="pointer-events-none absolute inset-0 rounded-2xl opacity-40"
@@ -37,19 +37,19 @@ export function AppHeader() {
           />
 
           {/* Logo */}
-          <Link href="/" className="relative z-10 flex items-center gap-2 shrink-0">
+          <Link href="/" className="relative z-10 flex shrink-0 items-center gap-2">
             <BrandLogo variant="full" className="h-9 w-auto" />
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-1 relative z-10">
+          <div className="relative z-10 hidden items-center gap-1 lg:flex">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
                     isActive
                       ? "text-cyan-300 bg-[rgba(53,213,255,0.1)]"
                       : "text-slate-400 hover:text-slate-200 hover:bg-[rgba(148,163,184,0.08)]"
@@ -62,14 +62,18 @@ export function AppHeader() {
           </div>
 
           {/* Right CTA */}
-          <div className="relative z-10 flex items-center gap-3">
+          <div className="relative z-10 flex shrink-0 items-center gap-2 sm:gap-3">
             <Link href="/upload">
-              <GradientButton size="sm">Choose PDF Files</GradientButton>
+              <GradientButton size="sm" className="whitespace-nowrap">
+                <span className="sm:hidden">Upload</span>
+                <span className="hidden sm:inline lg:hidden">Choose PDF</span>
+                <span className="hidden lg:inline">Choose PDF Files</span>
+              </GradientButton>
             </Link>
             {/* Mobile menu toggle */}
             <button
               type="button"
-              className="md:hidden relative z-10 p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-[rgba(148,163,184,0.08)]"
+              className="relative z-10 rounded-lg p-2 text-slate-400 hover:bg-[rgba(148,163,184,0.08)] hover:text-slate-200 lg:hidden"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
             >
@@ -80,7 +84,7 @@ export function AppHeader() {
 
         {/* Mobile nav */}
         {mobileOpen && (
-          <div className="md:hidden mt-2 p-4 rounded-2xl bg-[rgba(7,15,35,0.9)] backdrop-blur-2xl border border-[rgba(148,163,184,0.22)] shadow-[0_24px_80px_rgba(0,0,0,0.42)]">
+          <div className="mt-2 rounded-2xl border border-[rgba(148,163,184,0.22)] bg-[rgba(7,15,35,0.9)] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-2xl lg:hidden">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (

@@ -1,3 +1,5 @@
+import { LOCAL_BROWSER_FILE_LIMIT_MB } from "@/lib/files/limits";
+
 export type FileValidationResult =
   | { ok: true; files: File[] }
   | { ok: false; reason: string; rejectedFiles?: string[] };
@@ -14,7 +16,7 @@ export function validateFiles(
   fileList: FileList | File[],
   options?: { maxSizeMB?: number; multiple?: boolean }
 ): FileValidationResult {
-  const maxSize = (options?.maxSizeMB ?? 200) * 1024 * 1024;
+  const maxSize = (options?.maxSizeMB ?? LOCAL_BROWSER_FILE_LIMIT_MB) * 1024 * 1024;
   const allowMultiple = options?.multiple ?? true;
   const files = Array.from(fileList);
 
@@ -44,7 +46,7 @@ export function validateFiles(
 
     if (file.size > maxSize) {
       rejectedFiles.push(
-        `${file.name} (exceeds ${options?.maxSizeMB ?? 200} MB limit)`
+        `${file.name} (exceeds ${options?.maxSizeMB ?? LOCAL_BROWSER_FILE_LIMIT_MB} MB limit)`
       );
       continue;
     }

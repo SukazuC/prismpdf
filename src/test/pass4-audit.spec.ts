@@ -1,10 +1,12 @@
-import { test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { PDFDocument, PageSizes, StandardFonts, rgb } from "pdf-lib";
 import path from "path";
 import fs from "fs";
 
 const BASE = "reports/visual/pass4-audit";
-const FIXTURE_3 = path.resolve("test-fixture-3pages.pdf");
-const FIXTURE_2 = path.resolve("test-fixture-2pages.pdf");
+const FIXTURE_DIR = path.resolve(BASE, "fixtures");
+const FIXTURE_3 = path.join(FIXTURE_DIR, "test-fixture-3pages.pdf");
+const FIXTURE_2 = path.join(FIXTURE_DIR, "test-fixture-2pages.pdf");
 
 const VIEWPORTS = [
   { name: "mobile-375", width: 375, height: 812 },
@@ -12,6 +14,135 @@ const VIEWPORTS = [
   { name: "tablet-768", width: 768, height: 1024 },
   { name: "desktop-1440", width: 1440, height: 1000 },
 ];
+
+type AuditedPage = Page & { __consoleErrors?: string[] };
+
+const SCREENSHOT_WRITE_ATTEMPTS = 5;
+
+function isWindowsLockError(error: unknown) {
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return false;
+  }
+
+  return ["EBUSY", "EACCES", "EPERM"].includes(String(error.code));
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function retryWindowsLock<T>(operation: () => Promise<T>) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < SCREENSHOT_WRITE_ATTEMPTS; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isWindowsLockError(error)) {
+        throw error;
+      }
+
+      lastError = error;
+      await wait(50 * 2 ** attempt);
+    }
+  }
+
+  throw lastError;
+}
+
+async function removeExistingScreenshot(filePath: string) {
+  try {
+    await retryWindowsLock(() => fs.promises.rm(filePath, { force: true }));
+    return true;
+  } catch (error) {
+    if (isWindowsLockError(error)) {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+async function persistScreenshot(buffer: Buffer, dir: string, name: string) {
+  const fixedPath = path.join(dir, `${name}.png`);
+  const canUseFixedPath = await removeExistingScreenshot(fixedPath);
+
+  if (canUseFixedPath) {
+    try {
+      await retryWindowsLock(() => fs.promises.writeFile(fixedPath, buffer));
+      return fixedPath;
+    } catch (error) {
+      if (!isWindowsLockError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  const fallbackPath = path.join(dir, `${name}-${Date.now()}.png`);
+
+  try {
+    await retryWindowsLock(() => fs.promises.writeFile(fallbackPath, buffer));
+  } catch (error) {
+    console.warn(`  snap fallback write skipped: ${fallbackPath}`, error);
+  }
+
+  return fallbackPath;
+}
+
+async function ensureFixturePdf(filePath: string, pageCount: number) {
+  if (fs.existsSync(filePath)) {
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.HelveticaBold);
+  const bodyFont = await doc.embedFont(StandardFonts.Helvetica);
+  const colors = [
+    rgb(0.95, 0.33, 0.29),
+    rgb(0.19, 0.53, 0.96),
+    rgb(0.18, 0.66, 0.36),
+  ];
+
+  for (let i = 1; i <= pageCount; i++) {
+    const page = doc.addPage(PageSizes.A4);
+    const { width, height } = page.getSize();
+    const color = colors[(i - 1) % colors.length];
+
+    page.drawRectangle({ x: 0, y: 0, width, height, color });
+    page.drawRectangle({ x: 48, y: 48, width: width - 96, height: height - 96, color: rgb(1, 1, 1), opacity: 0.88 });
+    page.drawText(`Audit Fixture ${pageCount} Pages`, {
+      x: 72,
+      y: height - 128,
+      size: 30,
+      font,
+      color,
+    });
+    page.drawText(`Page ${i}`, {
+      x: 72,
+      y: height - 190,
+      size: 56,
+      font,
+      color,
+    });
+    page.drawText(`Distinct generated PDF page for pass4 visual upload checks.`, {
+      x: 72,
+      y: height - 235,
+      size: 16,
+      font: bodyFont,
+      color: rgb(0.12, 0.12, 0.12),
+      maxWidth: width - 144,
+    });
+  }
+
+  const bytes = await doc.save();
+  fs.writeFileSync(filePath, Buffer.from(bytes));
+}
+
+test.beforeAll(async () => {
+  await Promise.all([ensureFixturePdf(FIXTURE_3, 3), ensureFixturePdf(FIXTURE_2, 2)]);
+});
 
 function shotDir(vp: string) {
   const d = path.join(BASE, vp);
@@ -21,20 +152,39 @@ function shotDir(vp: string) {
 
 async function snap(page: Page, vp: string, name: string) {
   await page.waitForTimeout(800);
-  const fp = path.join(shotDir(vp), `${name}.png`);
-  await page.screenshot({ path: fp, fullPage: true });
-  console.log(`  snap [${vp}] ${name}`);
+  await page.addStyleTag({
+    content: `
+      nextjs-portal,
+      [data-nextjs-toast],
+      [data-nextjs-dialog-overlay],
+      [data-nextjs-dialog] {
+        display: none !important;
+      }
+    `,
+  });
+  const overflow = await page.evaluate(() => ({
+    documentClientWidth: document.documentElement.clientWidth,
+    documentScrollWidth: document.documentElement.scrollWidth,
+    bodyClientWidth: document.body?.clientWidth ?? 0,
+    bodyScrollWidth: document.body?.scrollWidth ?? 0,
+  }));
+  expect(overflow.documentScrollWidth, `${name}: document has horizontal overflow`).toBeLessThanOrEqual(
+    overflow.documentClientWidth + 1
+  );
+  expect(overflow.bodyScrollWidth, `${name}: body has horizontal overflow`).toBeLessThanOrEqual(
+    overflow.bodyClientWidth + 1
+  );
+  expect((page as AuditedPage).__consoleErrors ?? [], `${name}: console errors`).toEqual([]);
+  const dir = shotDir(vp);
+  const buffer = await page.screenshot({ fullPage: true });
+  const fp = await persistScreenshot(buffer, dir, name);
+  console.log(`  snap [${vp}] ${path.basename(fp, ".png")}`);
 }
 
 async function uploadPdf(page: Page, filePath: string) {
   const input = page.locator('input[type="file"]').first();
   await input.setInputFiles([filePath]);
   await page.waitForTimeout(3000);
-}
-
-async function clickText(page: Page, text: string) {
-  await page.locator(`text="${text}"`).first().click();
-  await page.waitForTimeout(400);
 }
 
 // ==============================================================
@@ -46,6 +196,12 @@ for (const vp of VIEWPORTS) {
   test.describe(`audit:${vpn}`, () => {
     test.beforeEach(async ({ page }) => {
       test.setTimeout(60000);
+      (page as AuditedPage).__consoleErrors = [];
+      page.on("console", (message) => {
+        if (message.type() === "error") {
+          (page as AuditedPage).__consoleErrors?.push(message.text());
+        }
+      });
       await page.setViewportSize({ width, height });
     });
 
@@ -95,7 +251,7 @@ for (const vp of VIEWPORTS) {
       await snap(page, vpn, "merge-two-files");
 
       // Click Merge PDFs button
-      const mergeBtn = page.locator('button:has-text("Merge PDFs")').first();
+      const mergeBtn = page.locator('button:visible:has-text("Merge PDFs")').and(page.locator("button:enabled")).first();
       await mergeBtn.click();
       await page.waitForURL("**/processing", { timeout: 10000 });
       await page.waitForTimeout(1500);

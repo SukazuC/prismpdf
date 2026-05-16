@@ -228,7 +228,7 @@ function ProcessingContent() {
                 <div>
                   <p className="text-sm font-medium text-[#f8fafc]">Keep this tab open</p>
                   <p className="text-xs text-slate-400">
-                    Your file is being processed. Please keep this tab open until complete.
+                    Your file is being processed in this tab. Keep it open; refreshing cancels the local in-tab state.
                   </p>
                 </div>
               </div>

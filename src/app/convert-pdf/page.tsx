@@ -24,13 +24,14 @@ export default function ConvertPdfPage() {
   const { state, dispatch } = useWorkspace();
   const [format, setFormat] = useState("jpg");
 
-  const hasFile = state.files.length > 0;
   const activeFile = getActiveFile(state);
+  const hasFile = activeFile?.status === "ready";
   const visiblePages = getVisiblePages(state);
   const selectedFormat = formatOptions.find((f) => f.value === format);
 
   const workerUnavailable = selectedFormat?.mode === "server" &&
     !process.env.NEXT_PUBLIC_PDF_WORKER_URL;
+  const canConvert = !workerUnavailable;
 
   const handleConvert = () => {
     dispatch({
@@ -65,7 +66,7 @@ export default function ConvertPdfPage() {
 
   return (
     <AppShell backdropVariant="editor">
-      <section className="page-shell pt-8 pb-16">
+      <section className="page-shell pt-8 pb-28 lg:pb-16">
         <div className="mb-6">
           <h1 className="text-[28px] font-bold text-[#f8fafc] break-words">Convert PDF</h1>
           <p className="text-sm text-slate-400 mt-1">
@@ -74,17 +75,26 @@ export default function ConvertPdfPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-5">
-          <div className="space-y-4">
+          <div className="order-2 space-y-4 lg:order-1">
             <GlassPanel className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-[#f8fafc]">Source file</h3>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: "workspaceReset" })}
-                  className="text-xs text-slate-400 hover:text-cyan-300 transition-colors"
-                >
-                  Start over
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => activeFile && dispatch({ type: "fileRemoved", fileId: activeFile.id })}
+                    className="text-xs text-slate-400 hover:text-red-300 transition-colors"
+                  >
+                    Remove file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: "workspaceReset" })}
+                    className="text-xs text-slate-400 hover:text-cyan-300 transition-colors"
+                  >
+                    Replace file
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[rgba(148,163,184,0.04)]">
                 <FileText size={16} className="text-cyan-300" />
@@ -139,21 +149,22 @@ export default function ConvertPdfPage() {
             <GradientButton
               onClick={handleConvert}
               size="lg"
-              className="w-full"
-              disabled={workerUnavailable}
+              className="hidden w-full lg:inline-flex"
+              disabled={!canConvert}
             >
               <Download size={18} />
               Convert to {format.toUpperCase()}
             </GradientButton>
           </div>
 
-          <div className="space-y-4">
+          <div className="order-1 min-w-0 space-y-4 lg:order-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wider">Source</p>
                 <GlassPanel className="p-4" intensity="soft">
                   <div className="aspect-[5/7] max-w-[180px] mx-auto rounded-lg overflow-hidden border border-[rgba(148,163,184,0.15)] bg-white">
                     {visiblePages[0]?.thumbnailUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- Source preview uses a dynamic PDF thumbnail object URL.
                       <img src={visiblePages[0].thumbnailUrl} alt="Source" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-[rgba(148,163,184,0.06)] flex items-center justify-center">
@@ -205,6 +216,12 @@ export default function ConvertPdfPage() {
           </div>
         </div>
       </section>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[rgba(148,163,184,0.15)] bg-[rgba(7,15,35,0.92)] px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
+        <GradientButton onClick={handleConvert} size="lg" className="w-full" disabled={!canConvert}>
+          <Download size={18} />
+          Convert to {format.toUpperCase()}
+        </GradientButton>
+      </div>
     </AppShell>
   );
 }

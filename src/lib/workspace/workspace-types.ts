@@ -46,6 +46,9 @@ export type ResultArtifact = {
   fileCount?: number;
   sourceSummary?: string;
   workerUsed?: boolean;
+  inputSizeBytes?: number;
+  outputFormat?: string;
+  compressionStatus?: "smaller" | "not-smaller";
 };
 
 export type WorkspaceState = {

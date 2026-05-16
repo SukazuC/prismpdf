@@ -36,7 +36,7 @@ function SuccessContent() {
               </div>
               <h2 className="text-xl font-bold text-[#f8fafc]">No completed file found</h2>
               <p className="text-sm text-slate-400">
-                There is no completed result to display. Process a file to see your results here.
+                Results are only stored in the current tab and are not persisted. Process a file to create a new download.
               </p>
               <div className="flex gap-3 mt-2">
                 <GradientButton onClick={() => router.push("/tools")} size="md">
@@ -63,8 +63,6 @@ function SuccessContent() {
     dispatch({ type: "workspaceReset" });
     router.push("/upload");
   };
-
-  const totalFileSize = state.files.reduce((s, f) => s + f.sizeBytes, 0);
 
   return (
     <AppShell backdropVariant="success">
@@ -110,7 +108,7 @@ function SuccessContent() {
             </h1>
 
             <p className="body-lg text-[#dbeafe] max-w-lg mx-auto">
-              We&apos;ve successfully processed your PDF. You can download it, preview it, or start another task.
+              We&apos;ve successfully processed your file. Download it now or start another task.
             </p>
           </div>
 
@@ -129,14 +127,17 @@ function SuccessContent() {
             <ResultFileCard
               name={result.name}
               sizeBytes={result.sizeBytes}
-              format={result.operation}
+              format={result.outputFormat || result.mimeType}
             />
             <TaskSummaryCard
               operation={result.operation}
               fileName={result.name}
-              pageCount={state.pages.filter((p) => !p.deleted).length}
-              fileSize={totalFileSize}
-              outputFormat="pdf"
+              pageCount={result.pageCount}
+              fileCount={result.fileCount}
+              fileSize={result.sizeBytes}
+              outputFormat={result.outputFormat}
+              sourceSummary={result.sourceSummary}
+              compressionStatus={result.compressionStatus}
               duration="Instant"
             />
           </div>

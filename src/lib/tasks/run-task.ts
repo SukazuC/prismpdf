@@ -14,6 +14,48 @@ type CutSettings = {
   pagesPerChunk?: number;
 };
 
+function readyFiles(state: WorkspaceState) {
+  return state.files.filter((f) => f.status === "ready");
+}
+
+function visiblePages(state: WorkspaceState) {
+  return state.pages.filter((p) => !p.deleted);
+}
+
+function sourceSummary(fileCount: number, pageCount?: number) {
+  const files = `${fileCount} ${fileCount === 1 ? "file" : "files"}`;
+  if (pageCount === undefined) return files;
+  return `${files}, ${pageCount} ${pageCount === 1 ? "page" : "pages"}`;
+}
+
+function totalSizeBytes(files: { sizeBytes: number }[]) {
+  return files.reduce((sum, file) => sum + file.sizeBytes, 0);
+}
+
+function outputFormatFromMime(mimeType: string, name: string) {
+  if (mimeType === "application/zip") return "zip";
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/png") return "png";
+  const ext = name.split(".").pop();
+  return ext ? ext.toLowerCase() : mimeType;
+}
+
+function cutPageCount(filePageCount: number, settings: CutSettings, resultFileCount: number) {
+  const method = settings.method || "extract";
+  if (method === "split") return filePageCount;
+  if (method === "range") {
+    return (settings.ranges || []).reduce((sum, range) => {
+      const start = Math.max(1, range.start);
+      const end = Math.min(filePageCount, range.end);
+      return end >= start ? sum + end - start + 1 : sum;
+    }, 0);
+  }
+
+  const selected = settings.selectedPageIndices || [];
+  const validSelectedCount = selected.filter((page) => page >= 1 && page <= filePageCount).length;
+  return validSelectedCount || (resultFileCount === 1 ? undefined : filePageCount);
+}
+
 export class TaskError extends Error {
   constructor(message: string) {
     super(message);
@@ -28,7 +70,7 @@ export async function runTask(state: WorkspaceState, task: PendingTask): Promise
     case "cut":
       return runCutClient(state, task);
     case "organize":
-      return runOrganizeClient(state, task);
+      return runOrganizeClient(state);
     case "convert":
       return runConvertClient(state, task);
     case "compress":
@@ -39,7 +81,7 @@ export async function runTask(state: WorkspaceState, task: PendingTask): Promise
 }
 
 async function runCutClient(state: WorkspaceState, task: PendingTask): Promise<ResultArtifact> {
-  const files = state.files.filter((f) => f.status === "ready");
+  const files = readyFiles(state);
   if (files.length === 0) {
     throw new TaskError("No file available for cut operation");
   }
@@ -71,6 +113,12 @@ async function runCutClient(state: WorkspaceState, task: PendingTask): Promise<R
       objectUrl,
       operation: "cut",
       createdAt: Date.now(),
+      pageCount: cutPageCount(file.pageCount, settings, result.blobs.length),
+      fileCount: result.blobs.length,
+      sourceSummary: sourceSummary(1, file.pageCount),
+      workerUsed: false,
+      inputSizeBytes: file.sizeBytes,
+      outputFormat: "zip",
     };
   }
 
@@ -85,11 +133,17 @@ async function runCutClient(state: WorkspaceState, task: PendingTask): Promise<R
     objectUrl,
     operation: "cut",
     createdAt: Date.now(),
+    pageCount: cutPageCount(file.pageCount, settings, result.blobs.length),
+    fileCount: 1,
+    sourceSummary: sourceSummary(1, file.pageCount),
+    workerUsed: false,
+    inputSizeBytes: file.sizeBytes,
+    outputFormat: "pdf",
   };
 }
 
-async function runOrganizeClient(state: WorkspaceState, _task: PendingTask): Promise<ResultArtifact> {
-  const files = state.files.filter((f) => f.status === "ready");
+async function runOrganizeClient(state: WorkspaceState): Promise<ResultArtifact> {
+  const files = readyFiles(state);
   if (files.length === 0) {
     throw new TaskError("No file available for organize operation");
   }
@@ -97,6 +151,7 @@ async function runOrganizeClient(state: WorkspaceState, _task: PendingTask): Pro
   const file = files[0];
   const blob = await organizeWorkspacePdf(file, state.pages);
   const objectUrl = URL.createObjectURL(blob);
+  const pageCount = visiblePages(state).filter((page) => page.fileId === file.id).length;
 
   return {
     id: `result-${Date.now()}`,
@@ -107,17 +162,24 @@ async function runOrganizeClient(state: WorkspaceState, _task: PendingTask): Pro
     objectUrl,
     operation: "organize",
     createdAt: Date.now(),
+    pageCount,
+    fileCount: 1,
+    sourceSummary: sourceSummary(1, file.pageCount),
+    workerUsed: false,
+    inputSizeBytes: file.sizeBytes,
+    outputFormat: "pdf",
   };
 }
 
 async function runMergeClient(state: WorkspaceState, task: PendingTask): Promise<ResultArtifact> {
-  const files = state.files.filter((f) => f.status === "ready");
+  const files = readyFiles(state);
   if (files.length < 2) {
     throw new TaskError("At least 2 files are required for merge");
   }
 
   const blob = await mergeWorkspacePages(files, state.pages);
   const objectUrl = URL.createObjectURL(blob);
+  const pageCount = visiblePages(state).length;
 
   return {
     id: `result-${Date.now()}`,
@@ -128,11 +190,17 @@ async function runMergeClient(state: WorkspaceState, task: PendingTask): Promise
     objectUrl,
     operation: "merge",
     createdAt: Date.now(),
+    pageCount,
+    fileCount: files.length,
+    sourceSummary: sourceSummary(files.length, files.reduce((sum, file) => sum + file.pageCount, 0)),
+    workerUsed: false,
+    inputSizeBytes: totalSizeBytes(files),
+    outputFormat: "pdf",
   };
 }
 
 async function runConvertClient(state: WorkspaceState, task: PendingTask): Promise<ResultArtifact> {
-  const files = state.files.filter((f) => f.status === "ready");
+  const files = readyFiles(state);
   if (files.length === 0) {
     throw new TaskError("No file available for conversion");
   }
@@ -142,28 +210,40 @@ async function runConvertClient(state: WorkspaceState, task: PendingTask): Promi
   switch (format) {
     case "jpg":
     case "png": {
-      const mimeType = format === "jpg" ? "image/jpeg" as const : "image/png" as const;
-      const results = await convertPdfToImages(file.file, mimeType);
+      const imageMimeType = format === "jpg" ? "image/jpeg" as const : "image/png" as const;
+      const results = await convertPdfToImages(file.file, imageMimeType);
+      if (results.length === 0) {
+        throw new TaskError("No pages could be converted to images");
+      }
       const { blob, name } = await packageImageResults(results);
       const objectUrl = URL.createObjectURL(blob);
+      const mimeType = results.length === 1
+        ? (format === "jpg" ? "image/jpeg" : "image/png")
+        : "application/zip";
       return {
         id: `result-${Date.now()}`,
         name,
-        mimeType: format === "jpg" ? "image/jpeg" : "image/png",
+        mimeType,
         sizeBytes: blob.size,
         blob,
         objectUrl,
         operation: "convert",
         createdAt: Date.now(),
+        pageCount: results.length,
+        fileCount: results.length,
+        sourceSummary: sourceSummary(1, file.pageCount),
+        workerUsed: false,
+        inputSizeBytes: file.sizeBytes,
+        outputFormat: outputFormatFromMime(mimeType, name),
       };
     }
 
     case "txt": {
-      const { text, hasText } = await extractPdfText(file.file);
+      const { text, hasText, pageCount } = await extractPdfText(file.file);
       const outputText = hasText
         ? text
         : "No selectable text found in this PDF. OCR is not available yet.";
-      const blob = createTextBlob(outputText, file.name.replace(/\.pdf$/i, "") + ".txt");
+      const blob = createTextBlob(outputText);
       const objectUrl = URL.createObjectURL(blob);
       return {
         id: `result-${Date.now()}`,
@@ -174,6 +254,12 @@ async function runConvertClient(state: WorkspaceState, task: PendingTask): Promi
         objectUrl,
         operation: "convert",
         createdAt: Date.now(),
+        pageCount,
+        fileCount: 1,
+        sourceSummary: sourceSummary(1, file.pageCount),
+        workerUsed: false,
+        inputSizeBytes: file.sizeBytes,
+        outputFormat: "txt",
       };
     }
 
@@ -199,6 +285,12 @@ async function runConvertClient(state: WorkspaceState, task: PendingTask): Promi
         objectUrl,
         operation: "convert",
         createdAt: Date.now(),
+        pageCount: file.pageCount,
+        fileCount: 1,
+        sourceSummary: sourceSummary(1, file.pageCount),
+        workerUsed: true,
+        inputSizeBytes: file.sizeBytes,
+        outputFormat: ext,
       };
     }
 
@@ -208,7 +300,7 @@ async function runConvertClient(state: WorkspaceState, task: PendingTask): Promi
 }
 
 async function runCompressClient(state: WorkspaceState, task: PendingTask): Promise<ResultArtifact> {
-  const files = state.files.filter((f) => f.status === "ready");
+  const files = readyFiles(state);
   if (files.length === 0) {
     throw new TaskError("No file available for compression");
   }
@@ -231,5 +323,12 @@ async function runCompressClient(state: WorkspaceState, task: PendingTask): Prom
     objectUrl,
     operation: "compress",
     createdAt: Date.now(),
+    pageCount: file.pageCount,
+    fileCount: 1,
+    sourceSummary: sourceSummary(1, file.pageCount),
+    workerUsed: true,
+    inputSizeBytes: file.sizeBytes,
+    outputFormat: "pdf",
+    compressionStatus: blob.size < file.sizeBytes ? "smaller" : "not-smaller",
   };
 }

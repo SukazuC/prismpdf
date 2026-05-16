@@ -42,13 +42,21 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 
     case "fileRemoved": {
       const removedFileIds = new Set([action.fileId]);
+      const removedPages = state.pages.filter((p) => removedFileIds.has(p.fileId));
+      const removedPageIds = new Set(removedPages.map((p) => p.id));
+      for (const p of removedPages) {
+        if (p.thumbnailUrl) URL.revokeObjectURL(p.thumbnailUrl);
+      }
+      const remainingFiles = state.files.filter((f) => !removedFileIds.has(f.id));
+      const activeFileId = removedFileIds.has(state.activeFileId ?? "")
+        ? remainingFiles.find((f) => f.status === "ready")?.id ?? remainingFiles[0]?.id
+        : state.activeFileId;
       return {
         ...state,
-        files: state.files.filter((f) => !removedFileIds.has(f.id)),
+        files: remainingFiles,
         pages: state.pages.filter((p) => !removedFileIds.has(p.fileId)),
-        selectedPageIds: state.selectedPageIds.filter(
-          (id) => !state.pages.find((p) => p.id === id && removedFileIds.has(p.fileId))
-        ),
+        selectedPageIds: state.selectedPageIds.filter((id) => !removedPageIds.has(id)),
+        activeFileId,
       };
     }
 

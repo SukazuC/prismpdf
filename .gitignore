@@ -41,7 +41,11 @@ yarn-error.log*
 next-env.d.ts
 
 # generated reports
-/reports/
+/reports/playwright/
 /test-results/
+
+# python caches
+__pycache__/
+*.py[cod]
 
 .vercel

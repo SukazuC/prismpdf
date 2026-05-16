@@ -1,7 +1,7 @@
 import { getPdfJs } from "@/lib/pdf/pdfjs";
+import { getThumbnailScale } from "@/lib/pdf/thumbnail-scale";
 
-const THUMBNAIL_SCALE = 0.3;
-const MAX_INITIAL_PAGES = 8;
+const MAX_INITIAL_PAGES = 32;
 
 export type PdfDocumentInfo = {
   pageCount: number;
@@ -22,7 +22,8 @@ export async function readPdfDocument(file: File): Promise<PdfDocumentInfo> {
     for (let i = 1; i <= pagesToRender; i++) {
       try {
         const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: THUMBNAIL_SCALE });
+        const baseViewport = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: getThumbnailScale(baseViewport.width) });
 
         const canvas = document.createElement("canvas");
         canvas.width = viewport.width;

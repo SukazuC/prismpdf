@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, type CSSProperties } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -26,7 +26,6 @@ type SortablePdfPageGridProps = {
   selectedIds: Set<string>;
   onSelect: (id: string) => void;
   onReorder: (pages: WorkspacePage[]) => void;
-  onRotate?: (id: string) => void;
   columns?: number;
 };
 
@@ -35,7 +34,6 @@ export function SortablePdfPageGrid({
   selectedIds,
   onSelect,
   onReorder,
-  onRotate,
   columns = 6,
 }: SortablePdfPageGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -75,6 +73,9 @@ export function SortablePdfPageGrid({
   );
 
   const activePage = activeId ? pages.find((p) => p.id === activeId) : null;
+  const gridStyle = {
+    "--grid-columns": Math.min(columns, pages.length || 1),
+  } as CSSProperties;
 
   return (
     <DndContext
@@ -85,10 +86,8 @@ export function SortablePdfPageGrid({
     >
       <SortableContext items={pages.map((p) => p.id)} strategy={rectSortingStrategy}>
         <div
-          className="grid gap-3"
-          style={{
-            gridTemplateColumns: `repeat(${Math.min(columns, pages.length || 1)}, minmax(0, 1fr))`,
-          }}
+          className="grid max-w-full grid-cols-[repeat(auto-fit,minmax(min(150px,100%),1fr))] gap-3 md:grid-cols-[repeat(auto-fit,minmax(min(170px,100%),1fr))] lg:[grid-template-columns:repeat(var(--grid-columns),minmax(0,1fr))]"
+          style={gridStyle}
         >
           {pages.map((page) => (
             <SortablePdfPageCard
@@ -96,8 +95,6 @@ export function SortablePdfPageGrid({
               page={page}
               isSelected={selectedIds.has(page.id)}
               onSelect={onSelect}
-              onRotate={onRotate}
-              compact={columns > 6}
             />
           ))}
         </div>
@@ -107,6 +104,7 @@ export function SortablePdfPageGrid({
         {activePage ? (
           <div className="aspect-[5/7] max-w-[180px] rounded-xl overflow-hidden border-2 border-cyan-400 shadow-2xl">
             {activePage.thumbnailUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- Drag previews reuse dynamic PDF thumbnail object URLs.
               <img
                 src={activePage.thumbnailUrl}
                 alt={`Page ${activePage.sourcePageIndex}`}

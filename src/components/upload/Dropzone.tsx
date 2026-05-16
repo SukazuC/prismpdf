@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback, type DragEvent } from "react";
 import { Upload } from "lucide-react";
+import { LOCAL_BROWSER_FILE_LIMIT_MB, LOCAL_PRIVACY_NOTE } from "@/lib/files/limits";
 
 type DropzoneState = "idle" | "drag-over" | "uploading" | "error" | "success" | "disabled";
 
@@ -31,11 +32,11 @@ const stateStyles: Record<DropzoneState, string> = {
 export function Dropzone({
   accept = [".pdf", ".docx", ".pptx", ".jpg", ".png"],
   multiple = true,
-  maxSizeMB = 200,
+  maxSizeMB = LOCAL_BROWSER_FILE_LIMIT_MB,
   title = "Drop your files here",
   subtitle = "or click to browse",
   ctaLabel = "Choose Files",
-  privacyNote = "Your files stay private. Processed locally in your browser.",
+  privacyNote = LOCAL_PRIVACY_NOTE,
   onFilesAccepted,
   state: externalState,
   errorMessage,

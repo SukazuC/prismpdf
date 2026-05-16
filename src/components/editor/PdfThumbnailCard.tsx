@@ -33,7 +33,7 @@ export function PdfThumbnailCard({
 
   return (
     <div
-      className={`relative group rounded-xl overflow-hidden transition-all duration-200 ${
+      className={`relative group min-w-0 rounded-xl overflow-hidden transition-all duration-200 ${
         isDimmed ? "opacity-40" : ""
       } ${selected ? "ring-2 ring-cyan-400 shadow-[0_0_20px_rgba(53,213,255,0.3)] scale-[1.02]" : "ring-1 ring-[rgba(148,163,184,0.15)] hover:ring-[rgba(148,163,184,0.3)]"}`}
     >
@@ -52,6 +52,7 @@ export function PdfThumbnailCard({
         aria-pressed={selected}
         aria-label={`Page ${page.localIndex}${selected ? " (selected)" : ""}`}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element -- PDF thumbnails are generated from dynamic canvas/object URLs. */}
         <img
           src={page.thumbnailUrl}
           alt={`Page ${page.localIndex}`}
@@ -77,7 +78,7 @@ export function PdfThumbnailCard({
 
         {/* Drag handle */}
         {showDragHandle && (
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded bg-[rgba(0,0,0,0.5)] text-slate-300 cursor-grab">
+          <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-1 rounded bg-[rgba(0,0,0,0.5)] text-slate-300 cursor-grab">
             <GripVertical size={14} />
           </div>
         )}
@@ -95,7 +96,7 @@ export function PdfThumbnailCard({
               e.stopPropagation();
               onRotate?.(page.id, 90);
             }}
-            className="absolute bottom-2 right-2 p-1 rounded bg-[rgba(0,0,0,0.5)] text-slate-300 opacity-0 group-hover:opacity-100 hover:text-cyan-300 transition-all"
+            className="absolute bottom-2 right-2 p-1 rounded bg-[rgba(0,0,0,0.5)] text-slate-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-cyan-300 transition-all"
             aria-label={`Rotate page ${page.localIndex}`}
           >
             <RotateCw size={12} />

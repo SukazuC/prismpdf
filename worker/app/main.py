@@ -1,7 +1,6 @@
 import logging
 import os
 import time
-from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +9,7 @@ from fastapi.responses import Response
 from app.operations.compress import compress_pdf
 from app.operations.convert_docx import convert_to_docx
 from app.operations.convert_pptx import convert_to_pptx
+from app.utils.filenames import output_filename
 from app.utils.tempfiles import TempDir
 
 logging.basicConfig(level=logging.INFO)
@@ -36,7 +36,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition", "Content-Length", "Content-Type",
-                     "X-Original-Size", "X-Output-Size", "X-Compression-Method", "X-Processing-Time"],
+                     "X-Original-Size", "X-Output-Size", "X-Compression-Method",
+                     "X-Compression-Status", "X-Processing-Time"],
 )
 
 
@@ -73,36 +74,41 @@ async def compress_endpoint(
 
             input_path.write_bytes(contents)
 
-            await compress_pdf(input_path, output_path, level)
+            result = await compress_pdf(input_path, output_path, level)
 
             if not output_path.exists():
                 raise HTTPException(500, "Compression produced no output")
 
             output_bytes = output_path.read_bytes()
-            original_size = len(contents)
             elapsed = time.time() - start_time
 
             logger.info(
-                "Compressed %s: %d -> %d bytes (%.1f%%) in %.2fs",
-                file.filename, original_size, len(output_bytes),
-                (1 - len(output_bytes) / original_size) * 100 if original_size else 0,
+                "endpoint=/compress original_size=%d output_size=%d status=%s method=%s elapsed=%.2fs",
+                result["original_size"], len(output_bytes), result["status"], result["method"],
                 elapsed,
             )
+            response_name = output_filename(file.filename, "pdf", prefix="compressed-")
 
             return Response(
                 content=output_bytes,
                 media_type="application/pdf",
                 headers={
-                    "Content-Disposition": f'attachment; filename="compressed-{file.filename}"',
-                    "X-Original-Size": str(original_size),
+                    "Content-Disposition": f'attachment; filename="{response_name}"',
+                    "X-Original-Size": str(result["original_size"]),
                     "X-Output-Size": str(len(output_bytes)),
-                    "X-Compression-Method": level,
+                    "X-Compression-Method": result["method"],
+                    "X-Compression-Status": result["status"],
                     "X-Processing-Time": f"{elapsed:.2f}",
                 },
             )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("Compression failed: %s", str(e))
-        raise HTTPException(500, f"Compression failed: {str(e)}")
+        logger.exception(
+            "endpoint=/compress original_size=%d output_size=0 status=failed method=none elapsed=%.2fs",
+            len(contents), time.time() - start_time,
+        )
+        raise HTTPException(500, "Compression failed. Please try another PDF or compression level.") from e
 
 
 @app.post("/convert/docx")
@@ -120,6 +126,7 @@ async def convert_docx_endpoint(
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(413, f"File exceeds maximum size of {MAX_FILE_SIZE // 1024 // 1024} MB")
 
+    start_time = time.time()
     temp = TempDir()
     try:
         with temp as tmp:
@@ -134,20 +141,30 @@ async def convert_docx_endpoint(
                 raise HTTPException(500, "DOCX conversion produced no output")
 
             output_bytes = output_path.read_bytes()
-            base_name = file.filename.rsplit(".", 1)[0] if file.filename else "document"
+            elapsed = time.time() - start_time
+            logger.info(
+                "endpoint=/convert/docx original_size=%d output_size=%d status=converted method=pdf2docx elapsed=%.2fs",
+                len(contents), len(output_bytes), elapsed,
+            )
+            response_name = output_filename(file.filename, "docx")
 
             return Response(
                 content=output_bytes,
                 media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 headers={
-                    "Content-Disposition": f'attachment; filename="{base_name}.docx"',
+                    "Content-Disposition": f'attachment; filename="{response_name}"',
                     "X-Original-Size": str(len(contents)),
                     "X-Output-Size": str(len(output_bytes)),
                 },
             )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("DOCX conversion failed: %s", str(e))
-        raise HTTPException(500, f"DOCX conversion failed: {str(e)}")
+        logger.exception(
+            "endpoint=/convert/docx original_size=%d output_size=0 status=failed method=pdf2docx elapsed=%.2fs",
+            len(contents), time.time() - start_time,
+        )
+        raise HTTPException(500, "DOCX conversion failed. Please try another PDF.") from e
 
 
 @app.post("/convert/pptx")
@@ -166,6 +183,7 @@ async def convert_pptx_endpoint(
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(413, f"File exceeds maximum size of {MAX_FILE_SIZE // 1024 // 1024} MB")
 
+    start_time = time.time()
     temp = TempDir()
     try:
         with temp as tmp:
@@ -180,17 +198,27 @@ async def convert_pptx_endpoint(
                 raise HTTPException(500, "PPTX conversion produced no output")
 
             output_bytes = output_path.read_bytes()
-            base_name = file.filename.rsplit(".", 1)[0] if file.filename else "document"
+            elapsed = time.time() - start_time
+            logger.info(
+                "endpoint=/convert/pptx original_size=%d output_size=%d status=converted method=pymupdf-pptx elapsed=%.2fs",
+                len(contents), len(output_bytes), elapsed,
+            )
+            response_name = output_filename(file.filename, "pptx")
 
             return Response(
                 content=output_bytes,
                 media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
                 headers={
-                    "Content-Disposition": f'attachment; filename="{base_name}.pptx"',
+                    "Content-Disposition": f'attachment; filename="{response_name}"',
                     "X-Original-Size": str(len(contents)),
                     "X-Output-Size": str(len(output_bytes)),
                 },
             )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("PPTX conversion failed: %s", str(e))
-        raise HTTPException(500, f"PPTX conversion failed: {str(e)}")
+        logger.exception(
+            "endpoint=/convert/pptx original_size=%d output_size=0 status=failed method=pymupdf-pptx elapsed=%.2fs",
+            len(contents), time.time() - start_time,
+        )
+        raise HTTPException(500, "PPTX conversion failed. Please try another PDF.") from e

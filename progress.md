@@ -185,15 +185,16 @@ Created FastAPI worker service at `worker/`:
 
 ### Done
 
-- Created fixture PDFs (3-page and 2-page) using pdf-lib
+- Pass4 audit fixtures are self-generated under `reports/visual/pass4-audit/fixtures/` using pdf-lib
 - Wrote `src/test/pass4-audit.spec.ts` — 72 Playwright tests across 4 viewports
+- Extended pass4 audit passes 72/72 across mobile-375, mobile-430, tablet-768, and desktop-1440
 - **121 screenshots** captured:
   - 4 viewports: mobile-375, mobile-430, tablet-768, desktop-1440
   - 10 static route initial states per viewport
   - Interactive states: merge (1 file, 2 files, processing, success), compress, convert (JPG/TXT/DOCX/start-over), cut (range/invalid), organize (file loaded/selected/toolbar)
 - Real uploaded PDFs used for all interactive states (via Playwright `setInputFiles`)
 - 5 PNG contact sheets + 5 HTML contact sheets + `NOTES.md`
-- Zero console errors during capture
+- No horizontal overflow and no console errors were observed by test assertions
 
 ### Deliverable
 
@@ -212,6 +213,27 @@ reports/visual/pass4-audit/
 
 ## Final state
 
+### Final-Pass Implementation Slice
+
+- Responsive shell/editor work: tightened route smoke coverage around current empty processing/success states and kept pass4 audit horizontal-overflow assertions active across home/upload chooser changes.
+- Intake, thumbnail, and lifecycle hardening: preserved real upload/thumbnail lifecycle coverage through operation and audit tests without reintroducing fake route parameters.
+- Worker truth/privacy: added focused mocked-fetch coverage for worker unavailability, payload-too-large handling, JSON detail surfacing, and generic 5xx retry messaging.
+- Result metadata and behavior: strengthened PDF operation assertions to verify page order, source content identity via dimensions, duplicate output, deletion, and rotations rather than relying only on page counts.
+- Test hardening: added final-pass behavioral tests in `operations.test.ts`, added `worker-client.test.ts`, and updated visual smoke routes to match current app behavior.
+
+### Validation From This Slice
+
+- `npm run lint`: passed with 0 warnings and 0 errors after lint-warning cleanup
+- `npm run typecheck`: clean
+- `npm run test`: 42/42 passed
+- `npm run build`: passed
+- `npm run visual`: passed, 20/20 screenshots
+- Pass4 audit: passed, 72/72
+- Python worker compile check: `py_compile` passed for worker files
+- Full validation passed: lint, typecheck, test (42 tests), build, visual (20/20), pass4 audit (72/72), Python `py_compile` worker files
+- `reports/visual` is intentionally included; `.gitignore` no longer broadly ignores `/reports/`, and only `/reports/playwright/` plus `/test-results/` remain ignored
+- Python cache files are ignored
+
 ### Architecture
 
 ```
@@ -226,7 +248,7 @@ src/
 │   ├── files/       Format bytes, download, ZIP
 │   ├── ranges/      Page range parser
 │   └── test-utils/  Fixture PDF generator
-├── test/            4 test files, 34 unit tests
+├── test/            Unit and Playwright test coverage, including 42 unit tests
 worker/              FastAPI Docker service (compress, DOCX, PPTX)
 ```
 
@@ -245,11 +267,14 @@ worker/              FastAPI Docker service (compress, DOCX, PPTX)
 
 | Check | Status |
 |---|---|
-| Lint | 0 errors |
-| Typecheck | Clean |
-| Tests | 34/34 passed |
-| Build | 13 static routes |
-| Playwright | 40/40 visual tests |
+| Lint | Passed, 0 warnings, 0 errors |
+| Typecheck | Passed |
+| Tests | Passed, 42/42 |
+| Build | Passed |
+| Visual | Passed, 20/20 screenshots |
+| Pass4 audit | Passed, 72/72 across mobile-375, mobile-430, tablet-768, desktop-1440 |
+| Python worker compile check | Passed, `py_compile` worker files |
+| Ignore policy | `reports/visual` intentionally included; only `/reports/playwright/`, `/test-results/`, and Python cache files are ignored |
 | Worker health | `{"status":"ok"}` |
 | CORS | Verified working |
 | Vercel production | https://prispdf.vercel.app |

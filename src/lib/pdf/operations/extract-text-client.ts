@@ -43,6 +43,6 @@ export async function extractPdfText(
   };
 }
 
-export function createTextBlob(text: string, _fileName: string): Blob {
+export function createTextBlob(text: string): Blob {
   return new Blob([text], { type: "text/plain;charset=utf-8" });
 }

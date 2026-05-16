@@ -32,6 +32,8 @@ export default function MergePdfPage() {
   );
 
   const hasFiles = state.files.length > 0;
+  const readyFileCount = state.files.filter((f) => f.status === "ready").length;
+  const canMerge = readyFileCount >= 2;
 
   const handleSelect = useCallback(
     (id: string) => {
@@ -141,19 +143,21 @@ export default function MergePdfPage() {
   // State: Has files → show editor
   return (
     <AppShell backdropVariant="editor">
-      <section className="page-shell pt-8 pb-16">
+      <section className="page-shell pt-8 pb-28 lg:pb-16">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-[28px] font-bold text-[#f8fafc] break-words">Merge PDF</h1>
             <p className="text-sm text-slate-400 mt-1">
               Combine multiple PDFs into a single document
             </p>
           </div>
-          <GradientButton onClick={handleMerge} size="lg" disabled={state.files.filter(f => f.status === "ready").length < 2}>
-            <Download size={18} />
-            Merge PDFs
-          </GradientButton>
+          <div className="hidden lg:block">
+            <GradientButton onClick={handleMerge} size="lg" disabled={!canMerge}>
+              <Download size={18} />
+              Merge PDFs
+            </GradientButton>
+          </div>
         </div>
 
         {/* Stats */}
@@ -165,8 +169,8 @@ export default function MergePdfPage() {
 
         {/* Main grid */}
         <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-5">
-          {/* Left sidebar */}
-          <div className="space-y-4">
+            {/* Left sidebar */}
+          <div className="order-2 space-y-4 lg:order-1">
             <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[#f8fafc] mb-3">Upload files</h3>
               <div className="space-y-2">
@@ -207,17 +211,25 @@ export default function MergePdfPage() {
 
             <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[#f8fafc] mb-3">Output file</h3>
-              <p className="text-xs text-slate-400">merged-document.pdf</p>
-              <p className="text-xs text-slate-500 mt-1">
-                {formatBytes(totalSize)} &middot; {totalPages} pages
+              <p className="text-xs text-slate-400">
+                {canMerge ? "merged-document.pdf" : "Add one more PDF to merge"}
               </p>
+              {canMerge ? (
+                <p className="text-xs text-slate-500 mt-1">
+                  {formatBytes(totalSize)} &middot; {totalPages} pages
+                </p>
+              ) : (
+                <p className="text-xs text-slate-500 mt-1">
+                  Merge output is available after 2 ready PDFs.
+                </p>
+              )}
             </GlassPanel>
           </div>
 
           {/* Right canvas */}
-          <div className="space-y-4">
+          <div className="order-1 min-w-0 space-y-4 lg:order-2">
             {/* Toolbar */}
-            <div className="flex items-center justify-between">
+            <div className="min-w-0">
               <EditorToolbar
                 onZoomIn={() => setGridColumns((c) => Math.min(c + 1, 10))}
                 onZoomOut={() => setGridColumns((c) => Math.max(c - 1, 2))}
@@ -264,6 +276,12 @@ export default function MergePdfPage() {
           </div>
         </GlassPanel>
       </section>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[rgba(148,163,184,0.15)] bg-[rgba(7,15,35,0.92)] px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
+        <GradientButton onClick={handleMerge} size="lg" className="w-full" disabled={!canMerge}>
+          <Download size={18} />
+          Merge PDFs
+        </GradientButton>
+      </div>
     </AppShell>
   );
 }

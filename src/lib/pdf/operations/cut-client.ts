@@ -24,7 +24,6 @@ export async function cutPdfPages(
 ): Promise<CutResult> {
   const arrayBuffer = await file.arrayBuffer();
   const sourcePdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-  const _totalPages = sourcePdf.getPageCount();
 
   switch (method) {
     case "range":

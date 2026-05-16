@@ -28,7 +28,20 @@ export default function OrganizePagesPage() {
   const activeFile = getActiveFile(state);
   const totalPages = visiblePages.length;
   const selectedCount = state.selectedPageIds.length;
-  const hasFile = state.files.length > 0;
+  const hasFile = activeFile?.status === "ready";
+
+  const handleRemoveFile = () => {
+    if (!activeFile) return;
+    setUndoStack([]);
+    setRedoStack([]);
+    dispatch({ type: "fileRemoved", fileId: activeFile.id });
+  };
+
+  const handleReplaceFile = () => {
+    setUndoStack([]);
+    setRedoStack([]);
+    dispatch({ type: "workspaceReset" });
+  };
 
   const saveState = useCallback(
     (newPages: WorkspacePage[]) => {
@@ -166,7 +179,7 @@ export default function OrganizePagesPage() {
 
   return (
     <AppShell backdropVariant="editor">
-      <section className="page-shell pt-8 pb-16">
+      <section className="page-shell pt-8 pb-28 lg:pb-16">
         <div className="flex items-center gap-2 text-sm text-slate-400 mb-4">
           <Link href="/tools" className="hover:text-slate-200 transition-colors">
             Tools
@@ -175,17 +188,19 @@ export default function OrganizePagesPage() {
           <span className="text-slate-200">Organize Pages</span>
         </div>
 
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-[28px] font-bold text-[#f8fafc] break-words">Organize Pages</h1>
             <p className="text-sm text-slate-400 mt-1">
               Reorder, rotate, delete, or duplicate pages
             </p>
           </div>
-          <GradientButton onClick={handleExport} size="lg">
-            <Download size={18} />
-            Export PDF
-          </GradientButton>
+          <div className="hidden lg:block">
+            <GradientButton onClick={handleExport} size="lg">
+              <Download size={18} />
+              Export PDF
+            </GradientButton>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3 mb-6">
@@ -196,17 +211,26 @@ export default function OrganizePagesPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[270px_minmax(0,1fr)_270px] gap-4">
-          <div className="space-y-4">
+          <div className="order-2 space-y-4 lg:order-1">
             <GlassPanel className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-[#f8fafc]">Document</h3>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: "workspaceReset" })}
-                  className="text-xs text-slate-400 hover:text-cyan-300 transition-colors"
-                >
-                  Start over
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleRemoveFile}
+                    className="text-xs text-slate-400 hover:text-red-300 transition-colors"
+                  >
+                    Remove file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleReplaceFile}
+                    className="text-xs text-slate-400 hover:text-cyan-300 transition-colors"
+                  >
+                    Replace file
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[rgba(148,163,184,0.04)]">
                 <FileText size={16} className="text-cyan-300" />
@@ -281,8 +305,8 @@ export default function OrganizePagesPage() {
             </GlassPanel>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="order-1 min-w-0 space-y-4 lg:order-2">
+            <div className="min-w-0">
               <EditorToolbar
                 onUndo={handleUndo}
                 onRedo={handleRedo}
@@ -329,7 +353,7 @@ export default function OrganizePagesPage() {
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="order-3 space-y-4">
             <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[#f8fafc] mb-3">Properties</h3>
               {selectedCount === 1 ? (() => {
@@ -365,7 +389,7 @@ export default function OrganizePagesPage() {
               <button
                 type="button"
                 onClick={handleExport}
-                className="mt-3 w-full px-4 py-2 rounded-xl bg-gradient-to-r from-[#28c7ff] via-[#1668ff] via-[#a855f7] to-[#f04cff] text-white text-sm font-semibold"
+                className="mt-3 hidden w-full px-4 py-2 rounded-xl bg-gradient-to-r from-[#28c7ff] via-[#1668ff] via-[#a855f7] to-[#f04cff] text-white text-sm font-semibold lg:block"
               >
                 Export PDF
               </button>
@@ -373,6 +397,12 @@ export default function OrganizePagesPage() {
           </div>
         </div>
       </section>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[rgba(148,163,184,0.15)] bg-[rgba(7,15,35,0.92)] px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
+        <GradientButton onClick={handleExport} size="lg" className="w-full">
+          <Download size={18} />
+          Export PDF
+        </GradientButton>
+      </div>
     </AppShell>
   );
 }

@@ -29,8 +29,25 @@ export default function CutPdfPage() {
 
   const visiblePages = useMemo(() => getVisiblePages(state), [state]);
   const pageCount = visiblePages.length;
-  const hasFile = state.files.length > 0;
   const activeFile = state.files.find(f => f.status === "ready");
+  const hasFile = Boolean(activeFile);
+
+  const handleRemoveFile = () => {
+    if (!activeFile) return;
+    setRangeInput("");
+    setRanges([]);
+    setParseError("");
+    setSelectedIds(new Set());
+    dispatch({ type: "fileRemoved", fileId: activeFile.id });
+  };
+
+  const handleReplaceFile = () => {
+    setRangeInput("");
+    setRanges([]);
+    setParseError("");
+    setSelectedIds(new Set());
+    dispatch({ type: "workspaceReset" });
+  };
 
   const selectedPages = useMemo(() => {
     try {
@@ -44,6 +61,10 @@ export default function CutPdfPage() {
     if (selectedPages?.ok) return selectedPages.selectedPages.length;
     return 0;
   }, [selectedPages]);
+  const canCut =
+    (method === "range" && outputPageCount > 0) ||
+    (method === "extract" && selectedIds.size > 0) ||
+    (method === "split" && Boolean(parseInt(rangeInput, 10)));
 
   const handleRangeChange = useCallback(
     (value: string) => {
@@ -128,7 +149,7 @@ export default function CutPdfPage() {
   // Editor state
   return (
     <AppShell backdropVariant="editor">
-      <section className="page-shell pt-8 pb-16">
+      <section className="page-shell pt-8 pb-28 lg:pb-16">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-[28px] font-bold text-[#f8fafc] break-words">Cut PDF</h1>
@@ -147,7 +168,7 @@ export default function CutPdfPage() {
         {/* Main grid */}
         <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-5">
           {/* Left sidebar */}
-          <div className="space-y-4">
+          <div className="order-2 space-y-4 lg:order-1">
             <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[#f8fafc] mb-3">Method</h3>
               <div className="space-y-2">
@@ -223,12 +244,8 @@ export default function CutPdfPage() {
             <GradientButton
               onClick={handleCut}
               size="lg"
-              className="w-full"
-              disabled={
-                (method === "range" && outputPageCount === 0) ||
-                (method === "extract" && selectedIds.size === 0) ||
-                (method === "split" && !parseInt(rangeInput, 10))
-              }
+              className="hidden w-full lg:inline-flex"
+              disabled={!canCut}
             >
               <Scissors size={18} />
               Cut PDF
@@ -236,22 +253,31 @@ export default function CutPdfPage() {
           </div>
 
           {/* Right editor */}
-          <div className="space-y-4">
+          <div className="order-1 min-w-0 space-y-4 lg:order-2">
             {/* Document header */}
             <GlassPanel className="p-4" intensity="soft">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Document</h3>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: "workspaceReset" })}
-                  className="text-xs text-slate-400 hover:text-cyan-300 transition-colors"
-                >
-                  Start over
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleRemoveFile}
+                    className="text-xs text-slate-400 hover:text-red-300 transition-colors"
+                  >
+                    Remove file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleReplaceFile}
+                    className="text-xs text-slate-400 hover:text-cyan-300 transition-colors"
+                  >
+                    Replace file
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <FileText size={18} className="text-cyan-300" />
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-[#f8fafc]">
                     {activeFile?.name || "document.pdf"}
                   </p>
@@ -261,10 +287,12 @@ export default function CutPdfPage() {
             </GlassPanel>
 
             {/* Toolbar */}
-            <EditorToolbar
-              onZoomIn={() => setGridColumns((c) => Math.min(c + 1, 10))}
-              onZoomOut={() => setGridColumns((c) => Math.max(c - 1, 2))}
-            />
+            <div className="min-w-0">
+              <EditorToolbar
+                onZoomIn={() => setGridColumns((c) => Math.min(c + 1, 10))}
+                onZoomOut={() => setGridColumns((c) => Math.max(c - 1, 2))}
+              />
+            </div>
 
             {/* Range timeline */}
             <RangeTimeline
@@ -303,6 +331,12 @@ export default function CutPdfPage() {
           </div>
         </div>
       </section>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[rgba(148,163,184,0.15)] bg-[rgba(7,15,35,0.92)] px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
+        <GradientButton onClick={handleCut} size="lg" className="w-full" disabled={!canCut}>
+          <Scissors size={18} />
+          Cut PDF
+        </GradientButton>
+      </div>
     </AppShell>
   );
 }

@@ -27,6 +27,7 @@ export function PdfPreviewPane({ pages, label, emptyMessage = "No pages to previ
             key={page.id}
             className="flex-shrink-0 w-24 aspect-[5/7] rounded-lg overflow-hidden border border-[rgba(148,163,184,0.15)] bg-white"
           >
+            {/* eslint-disable-next-line @next/next/no-img-element -- PDF thumbnails are generated from dynamic canvas/object URLs. */}
             <img
               src={page.thumbnailUrl}
               alt={`Page ${page.localIndex}`}

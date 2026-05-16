@@ -10,26 +10,26 @@ type WorkflowCardProps = {
 
 export function WorkflowCard({ title, description, steps, href }: WorkflowCardProps) {
   return (
-    <a href={href}>
-      <GlassPanel className="p-6 h-full cursor-pointer group hover:border-[rgba(56,189,248,0.35)] transition-all duration-300">
-        <div className="flex flex-col gap-4">
-          <div>
+    <a href={href} className="block h-full min-w-0">
+      <GlassPanel className="group h-full min-w-0 cursor-pointer p-6 transition-all duration-300 hover:border-[rgba(56,189,248,0.35)]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="min-w-0">
             <h3 className="text-[22px] font-bold leading-tight tracking-tight text-[#f8fafc] mb-1">
               {title}
             </h3>
             <p className="text-sm text-slate-400">{description}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
             {steps.map((step, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-lg bg-[rgba(53,213,255,0.1)] flex items-center justify-center text-cyan-300">
+              <div key={i} className="flex min-w-0 items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(53,213,255,0.1)] text-cyan-300">
                     {step.icon}
                   </span>
-                  <span className="text-xs text-slate-400">{step.label}</span>
+                  <span className="min-w-0 text-xs text-slate-400">{step.label}</span>
                 </div>
                 {i < steps.length - 1 && (
-                  <ArrowRight size={14} className="text-slate-600" />
+                  <ArrowRight size={14} className="shrink-0 text-slate-600" />
                 )}
               </div>
             ))}
