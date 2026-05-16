@@ -1,0 +1,5 @@
+node_modules
+.next
+reports
+test-fixture*.pdf
+*.zip
